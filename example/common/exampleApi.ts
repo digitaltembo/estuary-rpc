@@ -6,7 +6,7 @@ import {
   post,
   ws,
   EndDesc,
-} from "../../src/common/api";
+} from "estuary-rpc";
 
 export type ExampleMeta = SimpleMeta & {
   needsAuth?: boolean;
@@ -25,9 +25,9 @@ export interface FooService<Closure, Meta> extends Api<Closure, Meta> {
 
 export const exampleApiMeta: ExampleApi<unknown, ExampleMeta> = {
   foo: {
-    emptyPost: post("foo/emptyPost"),
-    simpleGet: get("foo/simpleGet", { needsAuth: true }),
-    simpleStream: ws("foo/simpleStream"),
+    emptyPost: post("api/foo/emptyPost"),
+    simpleGet: get("api/foo/simpleGet", { needsAuth: true }),
+    simpleStream: ws("api/foo/simpleStream"),
   },
-  fileUpload: post("fileUpload", { uploads: ["someFile.txt"] }),
+  fileUpload: post("api/fileUpload", { uploads: ["someFile.txt"] }),
 };

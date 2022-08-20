@@ -1,11 +1,12 @@
-import { BiDiStream } from "../../src/common/stream";
-import { ApiContext, createApiServer } from "../../src/server/server";
+import { BiDiStream } from "estuary-rpc";
+import { ApiContext, createApiServer } from "estuary-rpc-server";
+
 import {
   ExampleApi,
   exampleApiMeta,
   FooService,
   ExampleMeta,
-} from "../common/exampleApi";
+} from "./exampleApi";
 
 const server: ExampleApi<ApiContext, unknown> = {
   foo: {
@@ -26,12 +27,13 @@ const server: ExampleApi<ApiContext, unknown> = {
   },
 };
 
+// super straightforward middleware for handling authentication
 async function dumbAuth(
   { req, internalServerError }: ApiContext,
   { method, needsAuth }: ExampleMeta
 ) {
   if (needsAuth) {
-    if (method === "WS" && false) {
+    if (method === "WS") {
       internalServerError();
       return false;
     } else if (req.headers["authorization"] !== "SuperSecure") {
@@ -44,5 +46,12 @@ async function dumbAuth(
 
 createApiServer<ExampleMeta>(server, exampleApiMeta, {
   port: 8000,
+  staticFiles: {
+    fileRoot: "./",
+  },
+  servePrefixes: {
+    defaultFile: "./index.html",
+    prefixes: ["/api"],
+  },
   middlewares: [dumbAuth],
 });

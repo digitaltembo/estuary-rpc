@@ -1,0 +1,21 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/exampleServer.js",
+  "scripts": {
+    "start": "tsc && node dist/exampleServer.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^18.7.8",
+    "typescript": "^4.7.4"
+  },
+  "dependencies": {
+    "estuary-rpc": "^1.0.2",
+    "estuary-rpc-server": "^1.0.3"
+  }
+}
