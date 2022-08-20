@@ -1,6 +1,6 @@
 {
   "name": "estuary-rpc-server",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Estuary RPC is a native-TS type safe RPC system for servers and browser clients - this is the server specific implementation",
   "bugs": {
     "url": "https://github.com/digitaltembo/estuary-rpc/issues"
@@ -18,10 +18,6 @@
   },
   "main": "src/server/server.ts",
   "devDependencies": {
-    "@bazel/buildifier": "^5.1.0",
     "@types/node": "^18.7.6"
-  },
-  "dependencies": {
-    "ws": "^8.8.1"
   }
 }

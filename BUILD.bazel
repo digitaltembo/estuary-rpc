@@ -38,25 +38,21 @@ ts_project(
     deps = [
         ":common",
         "//:node_modules/@types/node",
-        "//:node_modules/ws",
     ],
 )
 
-
-
-
 npm_package(
   name = "estuary-rpc",
-  srcs = [":common", "package.json"],
+  srcs = [":common", "package.json", "README.md"],
 )
 npm_package(
   name = "estuary-rpc-client",
-  srcs = [":client", "client.package.json"],
+  srcs = [":client", "client.package.json", "README.md"],
   replace_prefixes = {"client.": ""}
 )
 
 npm_package(
   name = "estuary-rpc-server",
-  srcs = [":server", "server.package.json"],
-  replace_prefixes = {"client.": ""}
+  srcs = [":server", "server.package.json", "README.md"],
+  replace_prefixes = {"server.": ""}
 )

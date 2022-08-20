@@ -1,6 +1,6 @@
 import { BiDiStream } from "./stream";
 export * from "../common/stream";
-export * from "../common/statusCodes";
+export * as HTTP_STATUS_CODES from "../common/statusCodes";
 
 export type Method = "GET" | "POST" | "PUT" | "DELETE" | "WS";
 

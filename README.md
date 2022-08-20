@@ -1,9 +1,10 @@
 # Estuary RPC
 
-Estuary RPC is an attempt to make an extremely simple RPC system for use between browsers and servers that:
-a) is typesafe, with all types simply defined in TS
-b) supports most desired operations between client and server (REST methods, status codes, file uploads, automatic authentication)
-c) doesn't require much in the way of dependencies (at the moment, it simply requires the `ws` npm module for websocket serving)
+Estuary RPC is an attempt to make an extremely simple (toy) RPC system for use between browsers and servers that:
+
+- is typesafe, with all types simply defined in TS - meaning your code won't compile if the server or the client code is not invoked with the correct types for the given RPC call
+- supports most desired operations between client and server (REST methods, status codes, file uploads, automatic authentication)
+- doesn't have external dependencies
 
 ## Usage
 
