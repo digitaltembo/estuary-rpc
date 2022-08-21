@@ -1,34 +1,51 @@
-import { BiDiStream } from "./stream";
-export * from "../common/stream";
-export * as HTTP_STATUS_CODES from "../common/statusCodes";
+import { Duplex } from "./stream";
+export * from "./stream";
+export * as HTTP_STATUS_CODES from "./statusCodes";
 
 export type Method = "GET" | "POST" | "PUT" | "DELETE" | "WS";
 
 export interface Encoder<Req, Res, EncodedType> {
-  fromReq: (req: Req) => EncodedType;
-  toReq: (data: EncodedType) => Req;
-  fromRes: (res: Res) => EncodedType;
-  toRes: (data: EncodedType) => Res;
+  req: (req: Req) => EncodedType;
+  res: (res: Res) => EncodedType;
+}
+export interface Decoder<Req, Res, EncodedType> {
+  req: (data: EncodedType) => Req;
+  res: (data: EncodedType) => Res;
 }
 
-export interface Encoders<Req, Res> {
-  isBinary: boolean;
-  ws?: Encoder<Req, Res, WsData>;
-  rest?: Encoder<Req, Res, string>;
+export enum TransportType {
+  JSON,
+  URL_FORM_DATA,
+  MULTIPART_FORM_DATA,
+  UNKNOWN,
 }
-
-export const JSON_ENCODER: Encoder<unknown, unknown, string> = {
-  fromReq: (req: unknown) => JSON.stringify(req),
-  toReq: (data: unknown) => JSON.parse(data as string),
-  fromRes: (res: unknown) => JSON.stringify(res),
-  toRes: (data: unknown) => JSON.parse(data as string),
+export type JsonTransport = { transportType: TransportType.JSON };
+export type UrlFormTransport = { transportType: TransportType.URL_FORM_DATA };
+export type UnknownBinaryTransport<Req, Res> = {
+  transportType: TransportType.UNKNOWN;
+  isBinary: true;
+  contentType: string;
+  encode: Encoder<Req, Res, WsData>;
+  decode: Decoder<Req, Res, WsData>;
 };
+export type UknownStringTransport<Req, Res> = {
+  transportType: TransportType.UNKNOWN;
+  isBinary: false | undefined;
+  contentType: string;
+  encode: Encoder<Req, Res, WsData>;
+  decode: Decoder<Req, Res, WsData>;
+};
+
+export type Transport<Req, Res> =
+  | JsonTransport
+  | UrlFormTransport
+  | UnknownBinaryTransport<Req, Res>
+  | UknownStringTransport<Req, Res>;
 
 export interface SimpleMeta {
   method: Method;
   url: string;
-  uploads?: string[];
-  encoders?: Encoders<unknown, unknown>;
+  transport: Transport<unknown, unknown>;
 }
 
 // An Endpoint is the method implementation of a particular call
@@ -52,7 +69,7 @@ export type EndDesc<Req, Res, Closure, Meta> = EndpointDescription<
 
 export type WsData = Uint8Array | string;
 export type StreamEndpointDescription<Req, Res, Closure, Meta> =
-  EndpointDescription<BiDiStream<Req, Res>, void, Closure, Meta>;
+  EndpointDescription<Duplex<Req, Res>, void, Closure, Meta>;
 export type StreamDesc<Req, Res, Closure, Meta> = StreamEndpointDescription<
   Req,
   Res,
@@ -66,47 +83,51 @@ export interface Api<Closure, Meta> {
     | EndpointDescription<any, any, Closure, Meta>;
 }
 
-function describeEndpoint<Req, Res, Meta extends SimpleMeta>(
-  meta: Meta
-): EndpointDescription<Req, Res, unknown, Meta> {
-  return Object.assign(
-    async () => Promise.reject(new Error("Invalid Usage")),
-    meta
-  );
-}
-
-function rest<Req, Res, Meta extends SimpleMeta>(method: Method) {
-  return (url: string, opts?: Omit<Meta, "method" | "url">) =>
-    describeEndpoint<Req, Res, Meta>({ method, url, ...opts } as Meta);
+function endpoint<Req, Res, Meta extends SimpleMeta>(method: Method) {
+  return (
+    url: string,
+    opts?: Omit<Meta, "method" | "url">
+  ): EndpointDescription<Req, Res, unknown, Meta> => {
+    return Object.assign(
+      async () => Promise.reject(new Error("Invalid Usage")),
+      {
+        method,
+        url,
+        // default to encoding every request/response with JSON
+        transport: { transportType: TransportType.JSON },
+        ...opts,
+      } as Meta
+    );
+  };
 }
 
 export function get<Req, Res, Meta extends SimpleMeta>(
   url: string,
   opts?: Omit<Meta, "method" | "url">
 ) {
-  return rest<Req, Res, Meta>("GET")(url, opts);
+  return endpoint<Req, Res, Meta>("GET")(url, opts);
 }
 export function post<Req, Res, Meta extends SimpleMeta>(
   url: string,
   opts?: Omit<Meta, "method" | "url">
 ) {
-  return rest<Req, Res, Meta>("POST")(url, opts);
+  return endpoint<Req, Res, Meta>("POST")(url, opts);
 }
 export function put<Req, Res, Meta extends SimpleMeta>(
   url: string,
   opts?: Omit<Meta, "method" | "url">
 ) {
-  return rest<Req, Res, Meta>("PUT")(url, opts);
+  return endpoint<Req, Res, Meta>("PUT")(url, opts);
 }
 export function del<Req, Res, Meta extends SimpleMeta>(
   url: string,
   opts?: Omit<Meta, "method" | "url">
 ) {
-  return rest<Req, Res, Meta>("DELETE")(url, opts);
+  return endpoint<Req, Res, Meta>("DELETE")(url, opts);
 }
 export function ws<Req, Res, Meta extends SimpleMeta>(
   url: string,
   opts?: Omit<Meta, "method" | "url">
 ) {
-  return rest<BiDiStream<Req, Res>, void, Meta>("WS")(url, opts);
+  return endpoint<Duplex<Req, Res>, void, Meta>("WS")(url, opts);
 }

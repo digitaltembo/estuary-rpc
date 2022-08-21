@@ -3,5 +3,6 @@
         "declaration": true,
         "baseUrl": ".",
         "lib": ["es2015"],
+        "downlevelIteration": true,
     }
 }

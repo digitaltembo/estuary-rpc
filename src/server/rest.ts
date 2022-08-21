@@ -4,11 +4,12 @@ import {
   createServer,
   RequestListener,
 } from "http";
+import { URL } from "url";
 import {
-  Encoders,
   EndpointDescription,
-  JSON_ENCODER,
   SimpleMeta,
+  Transport,
+  TransportType,
 } from "../common/api";
 import HTTP_STATUS_CODES from "../common/statusCodes";
 import {
@@ -16,7 +17,7 @@ import {
   DEFAULT_NOT_FOUND,
   errorResponse,
 } from "./errors";
-import { automaticMiddleware, methodId } from "./middleware";
+import { automaticMiddleware, getUrl, incomingMethodId } from "./middleware";
 import { ApiContext, ServerOpts } from "./types";
 
 export const restResponse =
@@ -29,46 +30,65 @@ export const restResponse =
       .end(message);
   };
 
+export async function parseIncoming<Req, Res>(
+  incoming: IncomingMessage,
+  transport: Transport<Req, Res>,
+  url?: URL
+): Promise<Req | null> {
+  if (transport.transportType === TransportType.URL_FORM_DATA) {
+    const requestRecord: Record<string, unknown> = {};
+    for (const [key, value] of url?.searchParams ?? []) {
+      requestRecord[key] = JSON.parse(value);
+    }
+    // pinky swear Req looks like Record<string, unknown>;
+    return requestRecord as Req;
+  } else
+    return new Promise<string>((resolve, reject) => {
+      let body = "";
+      incoming.on("data", (chunk: string) => {
+        body += chunk;
+      });
+      incoming.on("end", () => resolve(body));
+      incoming.on("error", reject);
+    }).then((bodyStr: string) => {
+      if (transport.transportType === TransportType.UNKNOWN) {
+        return transport.decode.req(bodyStr);
+      }
+      if (bodyStr === undefined || bodyStr === "") {
+        // how to gracefully handle this if we don't know whether req is nullable?
+        return null;
+      }
+      return JSON.parse(bodyStr);
+    });
+}
+
 export function restEndpoint<Req, Res, Meta extends SimpleMeta>(
   endpoint: EndpointDescription<Req, Res, ApiContext, unknown>,
   meta: Meta,
   serverOpts: ServerOpts<Meta>
 ) {
-  const encoders = (meta.encoders as Encoders<Req, Res>) ?? {
-    isBinary: false,
-    rest: JSON_ENCODER,
-  };
   return async (req: IncomingMessage, res: ServerResponse) => {
     const respond = restResponse(res);
     const success = (response?: Res) =>
       response == null
         ? res.writeHead(HTTP_STATUS_CODES.NO_CONTENT).end()
-        : respond(HTTP_STATUS_CODES.OK, encoders.rest?.fromRes(response));
+        : respond(HTTP_STATUS_CODES.OK, JSON.stringify(response));
     const { badRequest, internalServerError } = createErrorHandlers(respond);
 
     try {
-      const body: Req = await new Promise<string>((resolve, reject) => {
-        let body = "";
-        req.on("data", (chunk: string) => {
-          body += chunk;
-        });
-        req.on("end", () => resolve(body));
-        req.on("error", reject);
-      }).then((bodyStr: string) => {
-        if (bodyStr === undefined || bodyStr === "") {
-          return undefined;
-        }
-        if (encoders.rest) {
-          return encoders.rest.toReq(bodyStr) as Req;
-        }
-        throw new Error("TODO needs encoder");
-      });
+      const url = getUrl(req);
+      const body: Req | null = await parseIncoming<Req, Res>(
+        req,
+        meta.transport as Transport<Req, Res>,
+        url
+      );
       const apiContext: ApiContext = {
         badRequest,
         internalServerError,
         respond,
         req,
         res,
+        url,
       };
 
       if (serverOpts.middlewares) {
@@ -78,7 +98,7 @@ export function restEndpoint<Req, Res, Meta extends SimpleMeta>(
           }
         }
       }
-      await endpoint(body, apiContext)
+      await endpoint(body as Req, apiContext)
         .then(success)
         .catch((error) => {
           internalServerError();
@@ -97,17 +117,12 @@ export function createRestServer<Meta extends SimpleMeta>(
   const restMiddleware = automaticMiddleware(serverOpts);
 
   return createServer(async (req: IncomingMessage, res: ServerResponse) => {
-    const incomingMethodId = methodId({
-      method: req.method,
-      url: req.url.slice(1),
-    });
-
     for (const middleware of restMiddleware) {
       if (!(await middleware(req, res))) {
         return;
       }
     }
-    const endpoint = restEndpoints[incomingMethodId];
+    const endpoint = restEndpoints[incomingMethodId(req)];
     if (endpoint) {
       endpoint(req, res);
     } else {

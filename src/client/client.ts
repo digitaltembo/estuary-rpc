@@ -1,13 +1,13 @@
 import {
   Api,
-  Encoders,
+  Transport,
   EndpointDescription,
-  JSON_ENCODER,
   SimpleMeta,
+  TransportType,
   WsData,
 } from "../common/api";
 import HTTP_STATUS_CODES from "../common/statusCodes";
-import { BiDiStream } from "../common/stream";
+import { Duplex } from "../common/stream";
 
 export * from "../common/stream";
 export * from "../common/statusCodes";
@@ -27,7 +27,7 @@ export type FetchOpts = {
 };
 
 export type FetchArgs<T> = FetchOpts & {
-  json?: T;
+  req?: T;
 };
 
 export type FetchOptsArg = FetchOpts | void;
@@ -54,27 +54,41 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
         url.searchParams.append(key, opts.params[key]);
       }
     }
+    if (meta.transport.transportType === TransportType.URL_FORM_DATA) {
+      Object.entries(req ?? {}).map(([key, value]) =>
+        url.searchParams.append(key, JSON.stringify(value))
+      );
+      console.log("encoding as URL_FORM", Object.entries(req), url.toString());
+    }
     xhr.open(meta.method, url.toString());
     if (opts?.timeout) {
       xhr.timeout = opts?.timeout;
     }
-    const encoders = (meta.encoders as Encoders<Req, Res>) ?? {
-      isBinary: false,
-      rest: JSON_ENCODER,
-    };
 
-    if (encoders.isBinary) {
+    if (meta.transport.transportType === TransportType.UNKNOWN) {
       xhr.responseType = "arraybuffer";
     } else {
       xhr.setRequestHeader("Accept", "application/json");
     }
 
-    let body: string | FormData | undefined;
-    if (opts?.json !== undefined) {
-      xhr.setRequestHeader("Content-Type", "application/json");
-      body = encoders.rest?.fromReq(opts?.json);
-    } else if (opts?.formData) {
-      body = opts?.formData;
+    let body: XMLHttpRequestBodyInit | null = null;
+    switch (meta.transport.transportType) {
+      case TransportType.JSON:
+        xhr.setRequestHeader("Content-Type", "application/json");
+        body = JSON.stringify(req) as string;
+        break;
+      case TransportType.URL_FORM_DATA:
+        xhr.setRequestHeader(
+          "Content-Type",
+          "application/x-www-form-urlencoded"
+        );
+        break;
+      case TransportType.UNKNOWN:
+        xhr.setRequestHeader("Content-Type", meta.transport.contentType);
+        if (req !== undefined) {
+          body = meta.transport.encode.req(req);
+        }
+        break;
     }
 
     xhr.onload = () => {
@@ -82,7 +96,11 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
         resolve(undefined as unknown as Res);
       } else if (xhr.status === HTTP_STATUS_CODES.OK) {
         try {
-          const parsedResponse = encoders.rest?.toRes(xhr.responseText);
+          // All non-custom-encoded server responses should be JSON
+          const parsedResponse =
+            meta.transport.transportType === TransportType.UNKNOWN
+              ? meta.transport.decode.res(xhr.responseText)
+              : JSON.parse(xhr.responseText);
           resolve(parsedResponse as unknown as Res);
         } catch (err: any) {
           reject(err);
@@ -123,31 +141,34 @@ function createRestEndpoint<Meta extends SimpleMeta>(
 function createWsEndpoint<Meta extends SimpleMeta>(
   meta: Meta,
   _?: ClientOpts
-): EndpointDescription<BiDiStream<unknown, unknown>, void, FetchOpts, Meta> {
-  const encoders = (meta.encoders as Encoders<unknown, unknown>) ?? {
-    isBinary: false,
-    ws: JSON_ENCODER,
-  };
-
-  const method = async (bidi: BiDiStream<unknown, unknown>) => {
-    const { server } = bidi;
+): EndpointDescription<Duplex<unknown, unknown>, void, FetchOpts, Meta> {
+  const method = async (duplex: Duplex<unknown, unknown>) => {
+    const { server } = duplex;
     const ws = new WebSocket(getUrl(meta));
-    if (!encoders.isBinary) {
+    if (meta.transport.transportType === TransportType.UNKNOWN) {
       ws.binaryType = "arraybuffer";
     }
     ws.onmessage = (message: MessageEvent) => {
-      server.write(encoders.ws?.toRes(message.data as unknown as string));
+      server.write(
+        meta.transport.transportType === TransportType.UNKNOWN
+          ? meta.transport.decode.req(message.data as string)
+          : JSON.parse(message.data as string)
+      );
     };
     ws.onerror = (ev: Event) => server.error(new Error(ev.toString()));
     ws.onclose = server.close;
 
-    bidi.closeServer();
+    duplex.closeServer();
     await new Promise<void>(
       (resolve) =>
         (ws.onopen = () => {
           server.addListener({
             onMessage: (req: unknown) =>
-              ws.send(encoders.ws?.fromReq(req) as WsData),
+              ws.send(
+                meta.transport.transportType === TransportType.UNKNOWN
+                  ? meta.transport.encode.req(req)
+                  : JSON.stringify(req)
+              ),
             onError: (err: Error) =>
               console.warn("Encountered error in WS connecion", err),
             onClose: () => ws.close(),

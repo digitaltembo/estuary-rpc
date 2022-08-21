@@ -23,7 +23,7 @@ function App() {
 
   const get = React.useCallback(() => {
     client.foo
-      .simpleGet(8)
+      .simpleGet({ input: 8 })
       .then((val: number) => toast(`Got ${val} from server`))
       .catch((err) => toast.error("Dangit, failure: " + err.message));
   }, [client]);

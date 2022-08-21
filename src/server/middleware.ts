@@ -35,6 +35,20 @@ export function methodId(meta: { method: string; url: string }) {
   return `${meta.method}:${meta.url}`;
 }
 
+export function getUrl(req: IncomingMessage): URL | undefined {
+  let url: URL | undefined;
+  try {
+    url = new URL(req.url ?? "", `http://${req.headers.host ?? ""}`);
+  } catch {}
+  return url;
+}
+export function incomingMethodId(req: IncomingMessage) {
+  return methodId({
+    method: req.method ?? "",
+    url: getUrl(req)?.pathname?.slice(1) ?? "",
+  });
+}
+
 export const serveStatic = async (
   _: IncomingMessage,
   res: ServerResponse,

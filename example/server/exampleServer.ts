@@ -1,4 +1,4 @@
-import { BiDiStream } from "estuary-rpc";
+import { Duplex } from "estuary-rpc";
 import { ApiContext, createApiServer } from "estuary-rpc-server";
 
 import {
@@ -13,8 +13,8 @@ const server: ExampleApi<ApiContext, unknown> = {
     emptyPost: async () => {
       console.log("got post");
     },
-    simpleGet: async (num: number) => 4,
-    simpleStream: async ({ server }: BiDiStream<string, boolean>) => {
+    simpleGet: async ({ input }: { input: number }) => 4,
+    simpleStream: async ({ server }: Duplex<string, boolean>) => {
       console.log("listening!");
       server.on("message", (input: string) => {
         console.log("Got message", input);

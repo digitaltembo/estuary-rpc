@@ -1,22 +1,22 @@
 import { IncomingMessage, Server } from "http";
-import { Duplex } from "stream";
+import { Duplex as Socket } from "stream";
 import { createHash } from "crypto";
 import { TextDecoder } from "util";
 
 import {
-  BiDiStream,
-  Encoders,
+  Duplex,
   EndpointDescription,
-  JSON_ENCODER,
   SimpleMeta,
-  WsData,
+  TransportType,
+  UknownStringTransport,
+  UnknownBinaryTransport,
 } from "../common/api";
 import {
   createErrorHandlers,
   DEFAULT_NOT_FOUND,
   errorResponse,
 } from "./errors";
-import { methodId } from "./middleware";
+import { incomingMethodId } from "./middleware";
 import { ApiContext, ServerOpts, WsEndpoints } from "./types";
 import {
   parseDataFrame,
@@ -35,7 +35,7 @@ import {
  *
  * Technically there are extensions and subprotocols that could also be referenced here
  */
-function upgradeConnection(req: IncomingMessage, socket: Duplex) {
+function upgradeConnection(req: IncomingMessage, socket: Socket) {
   const clientKey = req.headers["sec-websocket-key"];
   const reponseHeaders = [
     "HTTP/1.1 101 Switching Protocols",
@@ -52,33 +52,35 @@ function upgradeConnection(req: IncomingMessage, socket: Duplex) {
 const decoder = new TextDecoder();
 
 export function wsEndpoint<Req, Res, Meta extends SimpleMeta>(
-  endpoint: EndpointDescription<
-    BiDiStream<Req, Res>,
-    void,
-    ApiContext,
-    unknown
-  >,
+  endpoint: EndpointDescription<Duplex<Req, Res>, void, ApiContext, unknown>,
   meta: Meta,
   serverOpts: ServerOpts<Meta>
 ) {
-  const encoders =
-    (meta.encoders as Encoders<Req, Res>) ??
-    ({
-      isBinary: false,
-      ws: JSON_ENCODER,
-    } as Encoders<Req, Res>);
-
-  const sendRes = encoders.isBinary
-    ? (res: Res, socket: Duplex) => {
-        sendBinaryFrame(socket, encoders.ws?.fromRes(res) as Uint8Array);
+  const sendRes = (res: Res, socket: Socket) => {
+    if (meta.transport.transportType === TransportType.UNKNOWN) {
+      if (meta.transport.isBinary) {
+        sendBinaryFrame(
+          socket,
+          (meta.transport as UnknownBinaryTransport<Req, Res>).encode.res(
+            res
+          ) as Uint8Array
+        );
+      } else {
+        sendTextFrame(
+          socket,
+          (meta.transport as UknownStringTransport<Req, Res>).encode.res(
+            res
+          ) as string
+        );
       }
-    : (res: Res, socket: Duplex) => {
-        sendTextFrame(socket, (encoders.ws?.fromRes(res) as string) ?? "");
-      };
+    } else {
+      sendTextFrame(socket, JSON.stringify(res));
+    }
+  };
 
-  return async (request: IncomingMessage, socket: Duplex) => {
-    const bidi = new BiDiStream<Req, Res>();
-    const client = bidi.client;
+  return async (request: IncomingMessage, socket: Socket) => {
+    const duplex = new Duplex<Req, Res>();
+    const client = duplex.client;
 
     socket.on("close", client.close);
     socket.on("error", client.error);
@@ -99,7 +101,18 @@ export function wsEndpoint<Req, Res, Meta extends SimpleMeta>(
       } else if (parsedFrame.opCode === WsOpCode.TEXT) {
         strBuffer += decoder.decode(parsedFrame.payload);
         if (parsedFrame.fin) {
-          client.write(encoders.ws?.toReq(strBuffer) as Req);
+          try {
+            if (meta.transport.transportType === TransportType.UNKNOWN) {
+              client.write(meta.transport.decode.req(strBuffer) as Req);
+            } else {
+              client.write(JSON.parse(strBuffer) as Req);
+            }
+          } catch (err) {
+            console.error(
+              `Error: unable to parse string WS data ${strBuffer}`,
+              err
+            );
+          }
           strBuffer = "";
         }
       } else if (parsedFrame.opCode === WsOpCode.BINARY) {
@@ -118,7 +131,16 @@ export function wsEndpoint<Req, Res, Meta extends SimpleMeta>(
         bufOffset += parsedFrame.payloadLen;
 
         if (parsedFrame.fin) {
-          client.write(encoders.ws?.toReq(buffer as WsData) as Req);
+          if (
+            meta.transport.transportType === TransportType.UNKNOWN &&
+            meta.transport.isBinary
+          ) {
+            try {
+              client.write(meta.transport.decode.req(buffer) as Req);
+            } catch (err) {
+              console.error("Unable to encode WS data", err);
+            }
+          }
           bufOffset = 0;
         }
       }
@@ -141,7 +163,7 @@ export function wsEndpoint<Req, Res, Meta extends SimpleMeta>(
     };
     const { badRequest, internalServerError } = createErrorHandlers(respond);
 
-    bidi.closeClient();
+    duplex.closeClient();
     const apiContext = {
       respond,
       badRequest,
@@ -157,7 +179,7 @@ export function wsEndpoint<Req, Res, Meta extends SimpleMeta>(
         }
       }
     }
-    endpoint(bidi, apiContext);
+    endpoint(duplex, apiContext);
   };
 }
 
@@ -166,11 +188,10 @@ export function createWsServer<Meta extends SimpleMeta>(
   wsEndpoints: WsEndpoints,
   _: ServerOpts<Meta>
 ) {
-  server.on("upgrade", (req, socket: Duplex) => {
+  server.on("upgrade", (req, socket: Socket) => {
     upgradeConnection(req, socket);
 
-    const endpoint =
-      wsEndpoints[methodId({ method: "WS", url: req.url?.slice(1) ?? "" })];
+    const endpoint = wsEndpoints[incomingMethodId(req)];
     if (endpoint) {
       endpoint(req, socket);
     } else {

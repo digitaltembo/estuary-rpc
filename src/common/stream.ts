@@ -99,7 +99,7 @@ class Stream<T> implements StreamHandler<T, T> {
   }
 }
 
-export class BiDiStream<In, Out> {
+export class Duplex<In, Out> {
   public toServer: Stream<In>;
   public toClient: Stream<Out>;
   public server: StreamHandler<In, Out>;
@@ -133,7 +133,7 @@ export class BiDiStream<In, Out> {
     inFn: (input: NewIn) => In,
     outFn: (output: Out) => NewOut
   ) {
-    return new BiDiStream<NewIn, NewOut>(
+    return new Duplex<NewIn, NewOut>(
       this.toServer.mapIn(inFn),
       this.toClient.mapOut(outFn)
     );
@@ -154,11 +154,11 @@ export class BiDiStream<In, Out> {
 }
 
 export async function openStreamHandler<Out, In>(
-  streamEndpoint: (input: BiDiStream<In, Out>) => Promise<void>
+  streamEndpoint: (input: Duplex<In, Out>) => Promise<void>
 ) {
-  const bidi = new BiDiStream<In, Out>();
-  await streamEndpoint(bidi);
-  return bidi.client;
+  const duplex = new Duplex<In, Out>();
+  await streamEndpoint(duplex);
+  return duplex.client;
 }
 
 export default Stream;

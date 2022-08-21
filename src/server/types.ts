@@ -1,12 +1,13 @@
 import { IncomingMessage, ServerResponse, RequestListener } from "http";
 import { Duplex } from "stream";
+import { URL } from "url";
 import { SimpleMeta } from "../common/api";
 
 export type BaseApiContext = {
   respond: (status: number, message: string) => void;
   badRequest: (message?: string) => void;
   internalServerError: (message?: string) => void;
-
+  url?: URL;
   req: IncomingMessage;
 };
 

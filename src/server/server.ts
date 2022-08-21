@@ -1,7 +1,5 @@
-import { RequestListener } from "http";
-
 import { Api, EndpointDescription, SimpleMeta } from "../common/api";
-import { BiDiStream } from "../common/stream";
+import { Duplex } from "../common/stream";
 import { ApiContext, RestEndpoints, ServerOpts, WsEndpoints } from "./types";
 import { methodId } from "./middleware";
 import { createRestServer, restEndpoint } from "./rest";
@@ -21,7 +19,7 @@ function flattenApi<Meta extends SimpleMeta>(
       if (meta.method === "WS") {
         wsEndpoints[methodId(meta)] = wsEndpoint(
           api[apiName] as EndpointDescription<
-            BiDiStream<unknown, unknown>,
+            Duplex<unknown, unknown>,
             void,
             ApiContext,
             unknown

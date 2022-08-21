@@ -76,12 +76,12 @@ streamHandler.write("yooo");
 ```
   * `openStreamHandler` serves as a bit of a simplification of the underlying use of the RPC method, which works natively like so:
 ```
-import { BiDiStream } from "estuary-rpc";
+import { Duplex } from "estuary-rpc";
 
-const bidi = new BiDiStream<string, boolean>();
-await client.foo.simpleStream(bidi);
+const duplex = new Duplex<string, boolean>();
+await client.foo.simpleStream(duplex);
 
-const streamHandler = bidi.client;
+const streamHandler = duplex.client;
 streamHandler.on("message", (val: boolean) => {
   console.log("Got message from server", val);
   simpleStream.close()
@@ -99,7 +99,7 @@ const server: ExampleApi<ApiContext, unknown> = {
       console.log("got post");
     },
     simpleGet: async (num: number) => 4,
-    simpleStream: async ({ server }: BiDiStream<string, boolean>) => {
+    simpleStream: async ({ server }: Duplex<string, boolean>) => {
       server.on("message", (input: string) => {
         console.log("Got message", input);
         server.write(input === "foo");
