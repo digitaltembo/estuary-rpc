@@ -15,10 +15,13 @@ const server: ExampleApi<ApiContext, unknown> = {
     },
     simpleGet: async (num: number) => 4,
     simpleStream: async ({ server }: BiDiStream<string, boolean>) => {
+      console.log("listening!");
       server.on("message", (input: string) => {
         console.log("Got message", input);
         server.write(input === "foo");
       });
+      server.on("error", (err) => console.log("shoot"));
+      server.on("close", () => console.log("closed"));
     },
   } as FooService<ApiContext, unknown>,
 
@@ -37,7 +40,7 @@ async function dumbAuth(
       internalServerError();
       return false;
     } else if (req.headers["authorization"] !== "SuperSecure") {
-      internalServerError();
+      internalServerError("Unauthorized");
       return false;
     }
   }
@@ -47,10 +50,10 @@ async function dumbAuth(
 createApiServer<ExampleMeta>(server, exampleApiMeta, {
   port: 8000,
   staticFiles: {
-    fileRoot: "./",
+    fileRoot: "../react-client/build/static/",
   },
   servePrefixes: {
-    defaultFile: "./index.html",
+    defaultFile: "../react-client/build/index.html",
     prefixes: ["/api"],
   },
   middlewares: [dumbAuth],
