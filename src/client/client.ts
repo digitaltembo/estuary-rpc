@@ -33,7 +33,7 @@ export type FetchArgs<T> = FetchOpts & {
 export type FetchOptsArg = FetchOpts | void;
 
 export function getUrl(meta: SimpleMeta) {
-  const url = new URL(`${document.baseURI}api/${meta.url}`);
+  const url = new URL(`${document.baseURI}${meta.url}`);
   if (meta.method === "WS") {
     url.protocol = url.protocol === "http:" ? "ws:" : "wss";
   }
@@ -46,7 +46,7 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
   opts: FetchArgs<Req>,
   clientOpts?: ClientOpts
 ): Promise<Res> {
-  return new Promise((resolve, reject) => {
+  return new Promise<Res>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     const url = getUrl(meta);
     if (opts?.params) {
@@ -55,8 +55,8 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
       }
     }
     xhr.open(meta.method, url.toString());
-    if (opts.timeout) {
-      xhr.timeout = opts.timeout;
+    if (opts?.timeout) {
+      xhr.timeout = opts?.timeout;
     }
     const encoders = (meta.encoders as Encoders<Req, Res>) ?? {
       isBinary: false,
@@ -70,19 +70,29 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
     }
 
     let body: string | FormData | undefined;
-    if (opts.json !== undefined) {
+    if (opts?.json !== undefined) {
       xhr.setRequestHeader("Content-Type", "application/json");
-      body = encoders.rest?.fromReq(opts.json);
-    } else if (opts.formData) {
-      body = opts.formData;
+      body = encoders.rest?.fromReq(opts?.json);
+    } else if (opts?.formData) {
+      body = opts?.formData;
     }
 
     xhr.onload = () => {
       if (xhr.status === HTTP_STATUS_CODES.NO_CONTENT) {
-        resolve(null);
-      } else {
+        resolve(undefined as unknown as Res);
+      } else if (xhr.status === HTTP_STATUS_CODES.OK) {
         try {
           const parsedResponse = encoders.rest?.toRes(xhr.responseText);
+          resolve(parsedResponse as unknown as Res);
+        } catch (err: any) {
+          reject(err);
+        }
+      } else {
+        try {
+          const errorResponse = JSON.parse(xhr.responseText);
+          if (errorResponse.message) {
+            reject(new Error(errorResponse.message));
+          }
         } catch (err: any) {
           reject(err);
         }
@@ -105,9 +115,9 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
 function createRestEndpoint<Meta extends SimpleMeta>(
   meta: Meta,
   clientOpts?: ClientOpts
-): EndpointDescription<unknown, unknown, unknown, Meta> {
+): EndpointDescription<unknown, unknown, FetchArgs<unknown>, Meta> {
   const method = async (req: unknown, opts?: FetchOpts) =>
-    superFetch(req, meta, opts, clientOpts);
+    superFetch(req, meta, opts ?? {}, clientOpts);
   return Object.assign(method, meta);
 }
 function createWsEndpoint<Meta extends SimpleMeta>(
@@ -126,18 +136,25 @@ function createWsEndpoint<Meta extends SimpleMeta>(
       ws.binaryType = "arraybuffer";
     }
     ws.onmessage = (message: MessageEvent) => {
-      server.write(encoders.ws.toRes(message as unknown as string));
+      server.write(encoders.ws?.toRes(message.data as unknown as string));
     };
     ws.onerror = (ev: Event) => server.error(new Error(ev.toString()));
     ws.onclose = server.close;
 
-    server.addListener({
-      onMessage: (req: unknown) => ws.send(encoders.ws.fromReq(req) as WsData),
-      onError: (err: Error) =>
-        console.warn("Encountered error in WS connecion", err),
-      onClose: () => ws.close(),
-    });
     bidi.closeServer();
+    await new Promise<void>(
+      (resolve) =>
+        (ws.onopen = () => {
+          server.addListener({
+            onMessage: (req: unknown) =>
+              ws.send(encoders.ws?.fromReq(req) as WsData),
+            onError: (err: Error) =>
+              console.warn("Encountered error in WS connecion", err),
+            onClose: () => ws.close(),
+          });
+          resolve();
+        })
+    );
   };
 
   return Object.assign(method, meta);
@@ -145,7 +162,7 @@ function createWsEndpoint<Meta extends SimpleMeta>(
 
 export function convertApiClient<
   Meta extends SimpleMeta,
-  CustomApi extends Api<never, Meta>
+  CustomApi extends Api<unknown, Meta>
 >(api: CustomApi, opts?: ClientOpts): Api<FetchOpts, unknown> {
   const fetchApi: Api<FetchOpts, unknown> = {};
   Object.keys(api).forEach((apiName: string) => {
@@ -158,7 +175,7 @@ export function convertApiClient<
       }
     } else {
       fetchApi[apiName] = convertApiClient(
-        fetchApi[apiName] as Api<unknown, Meta>,
+        api[apiName] as Api<unknown, Meta>,
         opts
       );
     }

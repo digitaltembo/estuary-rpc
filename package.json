@@ -1,6 +1,6 @@
 {
   "name": "estuary-rpc",
-  "version": "1.0.2",
+  "version": "1.0.5",
   "description": "Estuary RPC is a native-TS type safe RPC system for servers and browser clients - this is the code in common for both",
   "bugs": {
     "url": "https://github.com/digitaltembo/estuary-rpc/issues"
@@ -20,5 +20,8 @@
   "main": "src/common/api.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@types/node": "^18.7.8"
   }
 }

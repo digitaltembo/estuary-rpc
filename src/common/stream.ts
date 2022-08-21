@@ -42,10 +42,10 @@ const CLOSED_OUT_STREAM: OutStream<unknown> = {
   mapOut: CLOSED_FN,
 };
 
-type StreamHandler<In, Out> = InStream<In> & OutStream<Out>;
+export type StreamHandler<In, Out> = InStream<In> & OutStream<Out>;
 
 class Stream<T> implements StreamHandler<T, T> {
-  private listeners: Array<StreamListener<T>>;
+  private listeners: Array<StreamListener<T>> = [];
 
   write(t: T) {
     this.listeners.forEach((l) => l.onMessage && l.onMessage(t));
@@ -108,24 +108,24 @@ export class BiDiStream<In, Out> {
     this.toServer = toServer;
     this.toClient = toClient;
     this.server = {
-      write: this.toClient.write,
-      error: this.toClient.error,
-      close: this.toClient.close,
-      mapOut: this.toClient.mapOut,
-      addListener: this.toServer.addListener,
-      removeListener: this.toServer.removeListener,
-      on: this.toServer.on,
-      mapIn: this.toServer.mapIn,
+      write: (msg) => this.toClient.write(msg),
+      error: (err) => this.toClient.error(err),
+      close: () => this.toClient.close(),
+      mapOut: (fn) => this.toClient.mapOut(fn),
+      addListener: (list) => this.toServer.addListener(list),
+      removeListener: (list) => this.toServer.removeListener(list),
+      on: (ty, ev) => this.toServer.on(ty, ev),
+      mapIn: (fn) => this.toServer.mapIn(fn),
     };
     this.client = {
-      write: this.toServer.write,
-      error: this.toServer.error,
-      close: this.toServer.close,
-      mapOut: this.toServer.mapOut,
-      addListener: this.toClient.addListener,
-      removeListener: this.toClient.removeListener,
-      on: this.toClient.on,
-      mapIn: this.toClient.mapIn,
+      write: (msg) => this.toServer.write(msg),
+      error: (err) => this.toServer.error(err),
+      close: () => this.toServer.close(),
+      mapOut: (fn) => this.toServer.mapOut(fn),
+      addListener: (list) => this.toClient.addListener(list),
+      removeListener: (list) => this.toClient.removeListener(list),
+      on: (ty, ev) => this.toClient.on(ty, ev),
+      mapIn: (fn) => this.toClient.mapIn(fn),
     };
   }
 
