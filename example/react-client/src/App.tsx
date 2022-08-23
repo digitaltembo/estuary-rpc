@@ -1,8 +1,41 @@
 import React from "react";
 import toast, { Toaster } from "react-hot-toast";
-import { openStreamHandler, StreamHandler } from "estuary-rpc";
+import SwaggerUI from "swagger-ui-react";
+import "swagger-ui-react/swagger-ui.css";
 
-import ClientContext, { SimpleForm } from "./ClientContext";
+import {
+  openStreamHandler,
+  StreamHandler,
+  generateOpenApiDocs,
+} from "estuary-rpc";
+
+import ClientContext, {
+  exampleApiMeta,
+  ExampleMeta,
+  SimpleForm,
+} from "./ClientContext";
+const spec = generateOpenApiDocs(
+  exampleApiMeta,
+  {
+    info: {
+      title: "Example API",
+      version: "foo.bar",
+    },
+    components: {
+      securitySchemes: {
+        SuperSecureAuth: {
+          type: "apiKey",
+          in: "header",
+          name: "authorization",
+        },
+      },
+    },
+  },
+  (incomingSwag: Record<string, unknown>, meta: ExampleMeta) =>
+    meta.needsAuth
+      ? { ...incomingSwag, security: { SuperSecureAuth: [] } }
+      : incomingSwag
+);
 
 function App() {
   const [pass, setPass] = React.useState("");
@@ -147,6 +180,11 @@ function App() {
         <button onClick={closeStream} disabled={streamHandler.current === null}>
           Stop Stream
         </button>
+      </div>
+
+      <div>
+        <h2>Swagger Docs</h2>
+        <SwaggerUI spec={spec} />
       </div>
       <Toaster />
     </div>

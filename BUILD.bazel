@@ -26,7 +26,7 @@ ts_project(
     ],
     tsconfig = {
         "compilerOptions": {
-            "lib": ["dom", "es2017"],
+            "lib": ["dom", "es2019"],
         },
     },
 )

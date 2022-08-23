@@ -2,7 +2,7 @@
     "compilerOptions": {
         "declaration": true,
         "baseUrl": ".",
-        "lib": ["es2015"],
+        "lib": ["es2019"],
         "downlevelIteration": true,
     }
 }

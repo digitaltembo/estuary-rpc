@@ -99,8 +99,18 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
       case TransportType.MULTIPART_FORM_DATA:
         // pinky swear that req is of type Record<string, unknown>
         const formData = new FormData();
-        Object.entries(req as unknown as Record<string, string | Blob>).forEach(
-          ([key, value]) => {
+        if (req instanceof File) {
+          formData.append(URL_FORM_DATA_KEY, req);
+        } else if (typeof req !== "object") {
+          // why are you using multipart form data then??
+          formData.append(
+            URL_FORM_DATA_KEY,
+            transport.rawStrings ? String(req) : JSON.stringify(String(req))
+          );
+        } else {
+          Object.entries(
+            req as unknown as Record<string, string | Blob>
+          ).forEach(([key, value]) => {
             if (value)
               formData.append(
                 key,
@@ -108,9 +118,8 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
                   ? value
                   : JSON.stringify(value)
               );
-          }
-        );
-        console.log("Attaching form data", formData, JSON.stringify(req));
+          });
+        }
         body = formData;
         break;
       case TransportType.UNKNOWN:

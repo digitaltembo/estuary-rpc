@@ -69,7 +69,15 @@ export async function parseIncoming<Req, Res>(
       incoming.on("error", reject);
     }).then((bodyStr: string) => {
       if (multiPart) {
-        return multiPart.get();
+        const multiData = multiPart.get();
+        // non-objects are encoded as _es_data=<value>
+        if (
+          multiData[URL_FORM_DATA_KEY] &&
+          Object.keys(multiData).length === 1
+        ) {
+          return multiData[URL_FORM_DATA_KEY] as Req;
+        }
+        return multiData as Req;
       }
       if (transport.transportType === TransportType.UNKNOWN) {
         return transport.decode.req(bodyStr);

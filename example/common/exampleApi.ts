@@ -34,16 +34,26 @@ export interface FooService<Closure, Meta> extends Api<Closure, Meta> {
 
 export const exampleApiMeta: ExampleApi<unknown, ExampleMeta> = {
   foo: {
-    simplePost: post("api/foo/emptyPost"),
-    simpleGet: get("api/foo/simpleGet"),
-    authenticatedGet: get("api/foo/authenticatedGet", { needsAuth: true }),
+    simplePost: post("api/foo/simplePost", { example: [17, 4] }),
+    simpleGet: get("api/foo/simpleGet", { example: ["hello", "HELLO"] }),
+    authenticatedGet: get("api/foo/authenticatedGet", {
+      example: ["hello", "HELLO"],
+      needsAuth: true,
+    }),
     simpleStream: ws("api/foo/simpleStream"),
   },
-  formPost: post("api/foo/simpleGet", {
+  formPost: post("api/formPost", {
     needsAuth: false,
     transport: {
       transportType: TransportType.MULTIPART_FORM_DATA,
       rawStrings: false,
+    },
+    reqSchema: {
+      type: "object",
+      properties: {
+        name: { type: "string", example: "foo" },
+        file: { type: "string", format: "binary" },
+      },
     },
   }),
 };

@@ -15,14 +15,13 @@ async function openTempFile(name: string) {
   return await fs.open(path.join(folder, name), "w");
 }
 
-export class MultiPartParser<Req> {
+export class MultiPartParser {
   private multipartData: Record<string, unknown> = {};
 
   private readingHeader: boolean = true;
   private boundary: string = "";
   private precedingPartialPart: string = "";
   private buffer: string = "";
-  private partBuffer: string = "";
   private file: fs.FileHandle | null;
   private simpleFile: SimpleFile = { content: "" };
   private terminus: string = "";
@@ -111,7 +110,6 @@ export class MultiPartParser<Req> {
     }
     this.readingHeader = true;
     this.simpleFile = { content: "" };
-    this.partBuffer = "";
     this.file = null;
     this.precedingPartialPart = "";
   }
@@ -145,7 +143,7 @@ export class MultiPartParser<Req> {
     this.buffer = allignedParts ? "" : currentParts[currentParts.length - 1];
   }
 
-  get(): Req {
-    return this.multipartData as Req;
+  get() {
+    return this.multipartData;
   }
 }
