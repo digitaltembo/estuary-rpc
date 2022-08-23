@@ -71,6 +71,7 @@ export * as HTTP_STATUS_CODES from "../common/statusCodes";
 export * from "../common/api";
 export * from "./errors";
 export * from "./middleware";
+export * from "./multipart";
 export * from "./rest";
 export * from "./types";
 export * from "./ws";

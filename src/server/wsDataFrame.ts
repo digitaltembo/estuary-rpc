@@ -101,14 +101,11 @@ export function sendPongFrame(socket: Duplex, ping: DataFrame) {
   sendDataFrame(socket, { ...ping, opCode: WsOpCode.PONG });
 }
 
-export function sendCloseFrame(
-  socket: Duplex,
-  payload: Uint8Array = new Uint8Array()
-) {
+export function sendCloseFrame(socket: Duplex, payload: string = "") {
   sendDataFrame(socket, {
     fin: true,
     opCode: WsOpCode.CONNECTION_CLOSE,
-    payload,
+    payload: encoder.encode(payload),
   });
 }
 

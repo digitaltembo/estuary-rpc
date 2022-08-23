@@ -19,8 +19,32 @@ export enum TransportType {
   MULTIPART_FORM_DATA,
   UNKNOWN,
 }
+// files passed from client are Blob types, which doesn't exist on the serverside
+// files interpretted on the server are Simplefiles
+export type CommonBlob = unknown;
+
+export type SimpleFile = {
+  name?: string;
+  contentType?: string;
+  content: string;
+};
+
 export type JsonTransport = { transportType: TransportType.JSON };
-export type UrlFormTransport = { transportType: TransportType.URL_FORM_DATA };
+
+// If encoding a non-object in url_form_data, give it a name
+export const URL_FORM_DATA_KEY = "_es_data";
+export type UrlFormTransport = {
+  transportType: TransportType.URL_FORM_DATA;
+  // set this to true to treat it as a Record<string, string> instead of trying to parse as JSON
+  rawStrings?: boolean;
+};
+export type MultipartFormTransport = {
+  transportType: TransportType.MULTIPART_FORM_DATA;
+  // set true to persist data to disk instead of just parsing it after the fact
+  persist?: boolean;
+  // set this to true to treat it as a Record<string, string> instead of trying to parse as JSON
+  rawStrings?: boolean;
+};
 export type UnknownBinaryTransport<Req, Res> = {
   transportType: TransportType.UNKNOWN;
   isBinary: true;
@@ -38,14 +62,15 @@ export type UknownStringTransport<Req, Res> = {
 
 export type Transport<Req, Res> =
   | JsonTransport
-  | UrlFormTransport
+  | UrlFormTransport // Req must be something like <Record, unknown>
+  | MultipartFormTransport // Req must be something like Record<string, string | CommonBlob>
   | UnknownBinaryTransport<Req, Res>
   | UknownStringTransport<Req, Res>;
 
 export interface SimpleMeta {
   method: Method;
   url: string;
-  transport: Transport<unknown, unknown>;
+  transport?: Transport<unknown, unknown>;
 }
 
 // An Endpoint is the method implementation of a particular call
@@ -86,6 +111,7 @@ export interface Api<Closure, Meta> {
 function endpoint<Req, Res, Meta extends SimpleMeta>(method: Method) {
   return (
     url: string,
+    defaultTransport: TransportType.JSON | TransportType.URL_FORM_DATA,
     opts?: Omit<Meta, "method" | "url">
   ): EndpointDescription<Req, Res, unknown, Meta> => {
     return Object.assign(
@@ -94,7 +120,7 @@ function endpoint<Req, Res, Meta extends SimpleMeta>(method: Method) {
         method,
         url,
         // default to encoding every request/response with JSON
-        transport: { transportType: TransportType.JSON },
+        transport: { transportType: defaultTransport },
         ...opts,
       } as Meta
     );
@@ -105,29 +131,37 @@ export function get<Req, Res, Meta extends SimpleMeta>(
   url: string,
   opts?: Omit<Meta, "method" | "url">
 ) {
-  return endpoint<Req, Res, Meta>("GET")(url, opts);
+  return endpoint<Req, Res, Meta>("GET")(
+    url,
+    TransportType.URL_FORM_DATA,
+    opts
+  );
 }
 export function post<Req, Res, Meta extends SimpleMeta>(
   url: string,
   opts?: Omit<Meta, "method" | "url">
 ) {
-  return endpoint<Req, Res, Meta>("POST")(url, opts);
+  return endpoint<Req, Res, Meta>("POST")(url, TransportType.JSON, opts);
 }
 export function put<Req, Res, Meta extends SimpleMeta>(
   url: string,
   opts?: Omit<Meta, "method" | "url">
 ) {
-  return endpoint<Req, Res, Meta>("PUT")(url, opts);
+  return endpoint<Req, Res, Meta>("PUT")(url, TransportType.JSON, opts);
 }
 export function del<Req, Res, Meta extends SimpleMeta>(
   url: string,
   opts?: Omit<Meta, "method" | "url">
 ) {
-  return endpoint<Req, Res, Meta>("DELETE")(url, opts);
+  return endpoint<Req, Res, Meta>("DELETE")(url, TransportType.JSON, opts);
 }
 export function ws<Req, Res, Meta extends SimpleMeta>(
   url: string,
   opts?: Omit<Meta, "method" | "url">
 ) {
-  return endpoint<Duplex<Req, Res>, void, Meta>("WS")(url, opts);
+  return endpoint<Duplex<Req, Res>, void, Meta>("WS")(
+    url,
+    TransportType.JSON,
+    opts
+  );
 }

@@ -1,6 +1,6 @@
 {
   "name": "estuary-rpc-client",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Estuary RPC is a native-TS type safe RPC system for servers and browser clients - this is the client specific implementation",
   "bugs": {
     "url": "https://github.com/digitaltembo/estuary-rpc/issues"

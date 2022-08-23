@@ -1,19 +1,27 @@
-import { Duplex } from "estuary-rpc";
+import { Duplex, SimpleFile } from "estuary-rpc";
 import { ApiContext, createApiServer } from "estuary-rpc-server";
+import { IncomingMessage } from "http";
 
 import {
   ExampleApi,
   exampleApiMeta,
   FooService,
   ExampleMeta,
+  SimpleForm,
 } from "./exampleApi";
 
+async function simpleGet(input: string) {
+  console.log("processing get", input);
+  return input.toUpperCase();
+}
 const server: ExampleApi<ApiContext, unknown> = {
   foo: {
-    emptyPost: async () => {
+    simplePost: async (num) => {
       console.log("got post");
+      return num + 1;
     },
-    simpleGet: async ({ input }: { input: number }) => 4,
+    simpleGet,
+    authenticatedGet: simpleGet,
     simpleStream: async ({ server }: Duplex<string, boolean>) => {
       console.log("listening!");
       server.on("message", (input: string) => {
@@ -25,8 +33,13 @@ const server: ExampleApi<ApiContext, unknown> = {
     },
   } as FooService<ApiContext, unknown>,
 
-  fileUpload: (_1: void, _2: ApiContext) => {
-    return null;
+  formPost: async (form: SimpleForm) => {
+    console.log(
+      "processing response",
+      form.name,
+      (form.file as SimpleFile).name
+    );
+    return 4;
   },
 };
 
@@ -50,11 +63,10 @@ async function dumbAuth(
 createApiServer<ExampleMeta>(server, exampleApiMeta, {
   port: 8000,
   staticFiles: {
-    fileRoot: "../react-client/build/static/",
-  },
-  servePrefixes: {
-    defaultFile: "../react-client/build/index.html",
-    prefixes: ["/api"],
+    fileRoot: "../react-client/build/",
+    apiPrefixes: ["/api"],
+    defaultFile: "index.html",
+    defaultCode: 200,
   },
   middlewares: [dumbAuth],
 });

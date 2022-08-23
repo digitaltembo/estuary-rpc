@@ -7,6 +7,7 @@ import {
   Duplex,
   EndpointDescription,
   SimpleMeta,
+  Transport,
   TransportType,
   UknownStringTransport,
   UnknownBinaryTransport,
@@ -16,7 +17,7 @@ import {
   DEFAULT_NOT_FOUND,
   errorResponse,
 } from "./errors";
-import { incomingMethodId } from "./middleware";
+import { getUrl, methodId } from "./middleware";
 import { ApiContext, ServerOpts, WsEndpoints } from "./types";
 import {
   parseDataFrame,
@@ -56,22 +57,15 @@ export function wsEndpoint<Req, Res, Meta extends SimpleMeta>(
   meta: Meta,
   serverOpts: ServerOpts<Meta>
 ) {
+  const transport = (meta.transport || {
+    transportType: TransportType.JSON,
+  }) as Transport<Req, Res>;
   const sendRes = (res: Res, socket: Socket) => {
-    if (meta.transport.transportType === TransportType.UNKNOWN) {
-      if (meta.transport.isBinary) {
-        sendBinaryFrame(
-          socket,
-          (meta.transport as UnknownBinaryTransport<Req, Res>).encode.res(
-            res
-          ) as Uint8Array
-        );
+    if (transport.transportType === TransportType.UNKNOWN) {
+      if (transport.isBinary) {
+        sendBinaryFrame(socket, transport.encode.res(res) as Uint8Array);
       } else {
-        sendTextFrame(
-          socket,
-          (meta.transport as UknownStringTransport<Req, Res>).encode.res(
-            res
-          ) as string
-        );
+        sendTextFrame(socket, transport.encode.res(res) as string);
       }
     } else {
       sendTextFrame(socket, JSON.stringify(res));
@@ -102,8 +96,8 @@ export function wsEndpoint<Req, Res, Meta extends SimpleMeta>(
         strBuffer += decoder.decode(parsedFrame.payload);
         if (parsedFrame.fin) {
           try {
-            if (meta.transport.transportType === TransportType.UNKNOWN) {
-              client.write(meta.transport.decode.req(strBuffer) as Req);
+            if (transport.transportType === TransportType.UNKNOWN) {
+              client.write(transport.decode.req(strBuffer));
             } else {
               client.write(JSON.parse(strBuffer) as Req);
             }
@@ -132,11 +126,11 @@ export function wsEndpoint<Req, Res, Meta extends SimpleMeta>(
 
         if (parsedFrame.fin) {
           if (
-            meta.transport.transportType === TransportType.UNKNOWN &&
-            meta.transport.isBinary
+            transport.transportType === TransportType.UNKNOWN &&
+            transport.isBinary
           ) {
             try {
-              client.write(meta.transport.decode.req(buffer) as Req);
+              client.write(transport.decode.req(buffer));
             } catch (err) {
               console.error("Unable to encode WS data", err);
             }
@@ -191,11 +185,17 @@ export function createWsServer<Meta extends SimpleMeta>(
   server.on("upgrade", (req, socket: Socket) => {
     upgradeConnection(req, socket);
 
-    const endpoint = wsEndpoints[incomingMethodId(req)];
+    const endpoint =
+      wsEndpoints[
+        methodId({
+          method: "WS",
+          url: getUrl(req)?.pathname?.slice(1) ?? "",
+        })
+      ];
     if (endpoint) {
       endpoint(req, socket);
     } else {
-      socket.write(errorResponse(DEFAULT_NOT_FOUND));
+      sendCloseFrame(socket, errorResponse(DEFAULT_NOT_FOUND));
       socket.end();
     }
   });

@@ -1,10 +1,9 @@
 import {
   Api,
-  Transport,
   EndpointDescription,
   SimpleMeta,
   TransportType,
-  WsData,
+  URL_FORM_DATA_KEY,
 } from "../common/api";
 import HTTP_STATUS_CODES from "../common/statusCodes";
 import { Duplex } from "../common/stream";
@@ -46,6 +45,7 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
   opts: FetchArgs<Req>,
   clientOpts?: ClientOpts
 ): Promise<Res> {
+  const transport = meta.transport || { transportType: TransportType.JSON };
   return new Promise<Res>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     const url = getUrl(meta);
@@ -54,10 +54,22 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
         url.searchParams.append(key, opts.params[key]);
       }
     }
-    if (meta.transport.transportType === TransportType.URL_FORM_DATA) {
-      Object.entries(req ?? {}).map(([key, value]) =>
-        url.searchParams.append(key, JSON.stringify(value))
-      );
+    if (transport.transportType === TransportType.URL_FORM_DATA) {
+      // pinky swear that req is of type Record<string, unknown>
+      if (typeof req === "object") {
+        Object.entries(req ?? {}).map(([key, value]) =>
+          url.searchParams.append(
+            key,
+            // and rawStrings actually means it should be Record<string, string>
+            transport.rawStrings ? String(value) : JSON.stringify(value)
+          )
+        );
+      } else {
+        url.searchParams.append(
+          URL_FORM_DATA_KEY,
+          transport.rawStrings ? String(req) : JSON.stringify(req)
+        );
+      }
       console.log("encoding as URL_FORM", Object.entries(req), url.toString());
     }
     xhr.open(meta.method, url.toString());
@@ -65,17 +77,18 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
       xhr.timeout = opts?.timeout;
     }
 
-    if (meta.transport.transportType === TransportType.UNKNOWN) {
+    if (transport.transportType === TransportType.UNKNOWN) {
       xhr.responseType = "arraybuffer";
     } else {
       xhr.setRequestHeader("Accept", "application/json");
     }
 
     let body: XMLHttpRequestBodyInit | null = null;
-    switch (meta.transport.transportType) {
+    switch (transport.transportType) {
       case TransportType.JSON:
         xhr.setRequestHeader("Content-Type", "application/json");
         body = JSON.stringify(req) as string;
+        console.log("Setting JSON request", body);
         break;
       case TransportType.URL_FORM_DATA:
         xhr.setRequestHeader(
@@ -83,10 +96,27 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
           "application/x-www-form-urlencoded"
         );
         break;
+      case TransportType.MULTIPART_FORM_DATA:
+        // pinky swear that req is of type Record<string, unknown>
+        const formData = new FormData();
+        Object.entries(req as unknown as Record<string, string | Blob>).forEach(
+          ([key, value]) => {
+            if (value)
+              formData.append(
+                key,
+                value instanceof File || transport.rawStrings
+                  ? value
+                  : JSON.stringify(value)
+              );
+          }
+        );
+        console.log("Attaching form data", formData, JSON.stringify(req));
+        body = formData;
+        break;
       case TransportType.UNKNOWN:
-        xhr.setRequestHeader("Content-Type", meta.transport.contentType);
+        xhr.setRequestHeader("Content-Type", transport.contentType);
         if (req !== undefined) {
-          body = meta.transport.encode.req(req);
+          body = transport.encode.req(req);
         }
         break;
     }
@@ -98,8 +128,8 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
         try {
           // All non-custom-encoded server responses should be JSON
           const parsedResponse =
-            meta.transport.transportType === TransportType.UNKNOWN
-              ? meta.transport.decode.res(xhr.responseText)
+            transport.transportType === TransportType.UNKNOWN
+              ? transport.decode.res(xhr.responseText)
               : JSON.parse(xhr.responseText);
           resolve(parsedResponse as unknown as Res);
         } catch (err: any) {
@@ -142,16 +172,18 @@ function createWsEndpoint<Meta extends SimpleMeta>(
   meta: Meta,
   _?: ClientOpts
 ): EndpointDescription<Duplex<unknown, unknown>, void, FetchOpts, Meta> {
+  const transport = meta.transport || { transportType: TransportType.JSON };
+
   const method = async (duplex: Duplex<unknown, unknown>) => {
     const { server } = duplex;
     const ws = new WebSocket(getUrl(meta));
-    if (meta.transport.transportType === TransportType.UNKNOWN) {
+    if (transport.transportType === TransportType.UNKNOWN) {
       ws.binaryType = "arraybuffer";
     }
     ws.onmessage = (message: MessageEvent) => {
       server.write(
-        meta.transport.transportType === TransportType.UNKNOWN
-          ? meta.transport.decode.req(message.data as string)
+        transport.transportType === TransportType.UNKNOWN
+          ? transport.decode.req(message.data as string)
           : JSON.parse(message.data as string)
       );
     };
@@ -165,8 +197,8 @@ function createWsEndpoint<Meta extends SimpleMeta>(
           server.addListener({
             onMessage: (req: unknown) =>
               ws.send(
-                meta.transport.transportType === TransportType.UNKNOWN
-                  ? meta.transport.encode.req(req)
+                transport.transportType === TransportType.UNKNOWN
+                  ? transport.encode.req(req)
                   : JSON.stringify(req)
               ),
             onError: (err: Error) =>
@@ -184,8 +216,8 @@ function createWsEndpoint<Meta extends SimpleMeta>(
 export function convertApiClient<
   Meta extends SimpleMeta,
   CustomApi extends Api<unknown, Meta>
->(api: CustomApi, opts?: ClientOpts): Api<FetchOpts, unknown> {
-  const fetchApi: Api<FetchOpts, unknown> = {};
+>(api: CustomApi, opts?: ClientOpts): Api<FetchOpts, Meta> {
+  const fetchApi: Api<FetchOpts, Meta> = {};
   Object.keys(api).forEach((apiName: string) => {
     if (typeof api[apiName] === "function") {
       const meta = api[apiName] as Meta;

@@ -1,5 +1,5 @@
 import React from "react";
-import { Duplex } from "estuary-rpc";
+import { CommonBlob, Duplex } from "estuary-rpc";
 import { convertApiClient, FetchOptsArg } from "estuary-rpc-client";
 
 // import { ExampleApi, exampleApiMeta } from "./exampleApi";
@@ -15,46 +15,61 @@ import {
   TransportType,
 } from "estuary-rpc";
 
+// create-react-app isn't liking my symlink, so just plop it here
+
 export type ExampleMeta = SimpleMeta & {
   needsAuth?: boolean;
 };
 
 export interface ExampleApi<Closure, Meta> extends Api<Closure, Meta> {
   foo: FooService<Closure, Meta>;
-  fileUpload: EndDesc<void, void, Closure, Meta>;
+  formPost: EndDesc<SimpleForm, number, Closure, Meta>;
 }
+export type SimpleForm = {
+  name: string;
+  file: CommonBlob;
+};
 
 export interface FooService<Closure, Meta> extends Api<Closure, Meta> {
-  emptyPost: EndDesc<void, void, Closure, Meta>;
-  simpleGet: EndDesc<{ input: number }, number, Closure, Meta>;
+  simplePost: EndDesc<number, number, Closure, Meta>;
+
+  simpleGet: EndDesc<string, string, Closure, Meta>;
+  authenticatedGet: EndDesc<string, string, Closure, Meta>;
+
   simpleStream: StreamDesc<string, boolean, Closure, Meta>;
 }
 
 export const exampleApiMeta: ExampleApi<unknown, ExampleMeta> = {
   foo: {
-    emptyPost: post("api/foo/emptyPost"),
-    simpleGet: get<{ input: number }, number, ExampleMeta>(
-      "api/foo/simpleGet",
-      {
-        needsAuth: true,
-        transport: { transportType: TransportType.URL_FORM_DATA },
-      }
-    ),
+    simplePost: post("api/foo/emptyPost"),
+    simpleGet: get("api/foo/simpleGet"),
+    authenticatedGet: get("api/foo/authenticatedGet", { needsAuth: true }),
     simpleStream: ws("api/foo/simpleStream"),
   },
-  fileUpload: post("api/fileUpload"),
+  formPost: post("api/foo/simpleGet", {
+    needsAuth: false,
+    transport: {
+      transportType: TransportType.MULTIPART_FORM_DATA,
+      rawStrings: false,
+    },
+  }),
 };
+
+// end of symlink plop
 
 type ClientContextType = {
   setAuth: (authorization: string) => void;
-  client: ExampleApi<FetchOptsArg, unknown>;
+  client: ExampleApi<FetchOptsArg, ExampleMeta>;
 };
 
 (window as any).hello = new Duplex<string, string>();
 
 const ClientContext = React.createContext<ClientContextType>({
   setAuth: () => {},
-  client: convertApiClient(exampleApiMeta) as ExampleApi<FetchOptsArg, unknown>,
+  client: convertApiClient(exampleApiMeta) as ExampleApi<
+    FetchOptsArg,
+    ExampleMeta
+  >,
 });
 
 export function ClientContextProvider({
@@ -67,7 +82,7 @@ export function ClientContextProvider({
       convertApiClient(exampleApiMeta, {
         ammendXhr: (xhr: XMLHttpRequest) =>
           xhr.setRequestHeader("authorization", auth),
-      }) as ExampleApi<FetchOptsArg, unknown>,
+      }) as ExampleApi<FetchOptsArg, ExampleMeta>,
     [auth]
   );
 

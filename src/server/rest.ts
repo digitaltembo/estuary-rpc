@@ -10,6 +10,7 @@ import {
   SimpleMeta,
   Transport,
   TransportType,
+  URL_FORM_DATA_KEY,
 } from "../common/api";
 import HTTP_STATUS_CODES from "../common/statusCodes";
 import {
@@ -17,7 +18,8 @@ import {
   DEFAULT_NOT_FOUND,
   errorResponse,
 } from "./errors";
-import { automaticMiddleware, getUrl, incomingMethodId } from "./middleware";
+import { automaticMiddleware, getUrl, methodId } from "./middleware";
+import { MultiPartParser } from "./multipart";
 import { ApiContext, ServerOpts } from "./types";
 
 export const restResponse =
@@ -38,19 +40,37 @@ export async function parseIncoming<Req, Res>(
   if (transport.transportType === TransportType.URL_FORM_DATA) {
     const requestRecord: Record<string, unknown> = {};
     for (const [key, value] of url?.searchParams ?? []) {
-      requestRecord[key] = JSON.parse(value);
+      requestRecord[key] = transport.rawStrings ? value : JSON.parse(value);
     }
-    // pinky swear Req looks like Record<string, unknown>;
+    // non-objects are encoded as _es_data=<value>
+    if (
+      requestRecord[URL_FORM_DATA_KEY] &&
+      Object.keys(requestRecord).length === 1
+    ) {
+      return requestRecord[URL_FORM_DATA_KEY] as Req;
+    }
     return requestRecord as Req;
-  } else
+  } else {
+    const multiPart =
+      transport.transportType === TransportType.MULTIPART_FORM_DATA
+        ? new MultiPartParser(incoming, transport.persist, transport.rawStrings)
+        : null;
+
     return new Promise<string>((resolve, reject) => {
       let body = "";
       incoming.on("data", (chunk: string) => {
-        body += chunk;
+        if (multiPart) {
+          multiPart.parse(chunk);
+        } else {
+          body += chunk;
+        }
       });
       incoming.on("end", () => resolve(body));
       incoming.on("error", reject);
     }).then((bodyStr: string) => {
+      if (multiPart) {
+        return multiPart.get();
+      }
       if (transport.transportType === TransportType.UNKNOWN) {
         return transport.decode.req(bodyStr);
       }
@@ -60,6 +80,7 @@ export async function parseIncoming<Req, Res>(
       }
       return JSON.parse(bodyStr);
     });
+  }
 }
 
 export function restEndpoint<Req, Res, Meta extends SimpleMeta>(
@@ -67,6 +88,9 @@ export function restEndpoint<Req, Res, Meta extends SimpleMeta>(
   meta: Meta,
   serverOpts: ServerOpts<Meta>
 ) {
+  const transport = (meta.transport || {
+    transportType: TransportType.JSON,
+  }) as Transport<Req, Res>;
   return async (req: IncomingMessage, res: ServerResponse) => {
     const respond = restResponse(res);
     const success = (response?: Res) =>
@@ -79,7 +103,7 @@ export function restEndpoint<Req, Res, Meta extends SimpleMeta>(
       const url = getUrl(req);
       const body: Req | null = await parseIncoming<Req, Res>(
         req,
-        meta.transport as Transport<Req, Res>,
+        transport,
         url
       );
       const apiContext: ApiContext = {
@@ -122,7 +146,13 @@ export function createRestServer<Meta extends SimpleMeta>(
         return;
       }
     }
-    const endpoint = restEndpoints[incomingMethodId(req)];
+    const endpoint =
+      restEndpoints[
+        methodId({
+          method: req.method ?? "",
+          url: getUrl(req)?.pathname?.slice(1) ?? "",
+        })
+      ];
     if (endpoint) {
       endpoint(req, res);
     } else {

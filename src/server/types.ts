@@ -29,22 +29,25 @@ export type RestMiddleware = (
   res: ServerResponse
 ) => Promise<boolean>;
 
+// with static files, you can set things up so that
+// * If a request comes in prefixed by urlRoot, or
+//      a request comes in NOT prefixed by apiPrefixes
+// * the static file at fileRoot/<req path without urlRoot> will be served
+// * If there is no such file there, fileRoot/defaultFile will be served with HTTP CODE defaultCode
+export type StaticFileOpts = {
+  defaultFile?: string;
+  defaultCode?: number;
+  apiPrefixes?: string[];
+  fileRoot?: string;
+  urlRoot?: string;
+};
+
 export type ServerOpts<Meta extends SimpleMeta> = {
   port: number;
   restMiddleware?: RestMiddleware[];
   middlewares?: Middleware<Meta>[];
   // If defined, only respond to requests on the following prefixes (ignored by static definition, if provided)
-  servePrefixes?: {
-    // otherwise, serve the static file at defaultFile
-    defaultFile: string;
-    prefixes: string[];
-  };
-  staticFiles?: {
-    // path to the static files
-    fileRoot: string;
-    // url on which to serve them, defaults to /static/
-    urlRoot?: string;
-  };
+  staticFiles?: StaticFileOpts;
 };
 
 export type WsListener = (request: IncomingMessage, socket: Duplex) => void;

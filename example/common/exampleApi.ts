@@ -7,6 +7,7 @@ import {
   ws,
   EndDesc,
   TransportType,
+  CommonBlob,
 } from "estuary-rpc";
 
 export type ExampleMeta = SimpleMeta & {
@@ -15,26 +16,34 @@ export type ExampleMeta = SimpleMeta & {
 
 export interface ExampleApi<Closure, Meta> extends Api<Closure, Meta> {
   foo: FooService<Closure, Meta>;
-  fileUpload: EndDesc<void, void, Closure, Meta>;
+  formPost: EndDesc<SimpleForm, number, Closure, Meta>;
 }
+export type SimpleForm = {
+  name: string;
+  file: CommonBlob;
+};
 
 export interface FooService<Closure, Meta> extends Api<Closure, Meta> {
-  emptyPost: EndDesc<void, void, Closure, Meta>;
-  simpleGet: EndDesc<{ input: number }, number, Closure, Meta>;
+  simplePost: EndDesc<number, number, Closure, Meta>;
+
+  simpleGet: EndDesc<string, string, Closure, Meta>;
+  authenticatedGet: EndDesc<string, string, Closure, Meta>;
+
   simpleStream: StreamDesc<string, boolean, Closure, Meta>;
 }
 
 export const exampleApiMeta: ExampleApi<unknown, ExampleMeta> = {
   foo: {
-    emptyPost: post("api/foo/emptyPost"),
-    simpleGet: get<{ input: number }, number, ExampleMeta>(
-      "api/foo/simpleGet",
-      {
-        needsAuth: true,
-        transport: { transportType: TransportType.URL_FORM_DATA },
-      }
-    ),
+    simplePost: post("api/foo/emptyPost"),
+    simpleGet: get("api/foo/simpleGet"),
+    authenticatedGet: get("api/foo/authenticatedGet", { needsAuth: true }),
     simpleStream: ws("api/foo/simpleStream"),
   },
-  fileUpload: post("api/fileUpload"),
+  formPost: post("api/foo/simpleGet", {
+    needsAuth: false,
+    transport: {
+      transportType: TransportType.MULTIPART_FORM_DATA,
+      rawStrings: false,
+    },
+  }),
 };
