@@ -1,13 +1,13 @@
 import { IncomingMessage, ServerResponse, RequestListener } from "http";
 import { Duplex } from "stream";
-import { URL } from "url";
-import { SimpleMeta } from "../common/api";
+import { Authentication, SimpleMeta } from "../common/api";
 
 export type BaseApiContext = {
   respond: (status: number, message: string) => void;
   badRequest: (message?: string) => void;
   internalServerError: (message?: string) => void;
-  url?: URL;
+
+  authentication?: Authentication;
   req: IncomingMessage;
 };
 
@@ -48,6 +48,9 @@ export type ServerOpts<Meta extends SimpleMeta> = {
   middlewares?: Middleware<Meta>[];
   // If defined, only respond to requests on the following prefixes (ignored by static definition, if provided)
   staticFiles?: StaticFileOpts;
+
+  authenticate?: (authentication: Authentication) => boolean;
+  defaultAuthentication?: Authentication;
 };
 
 export type WsListener = (request: IncomingMessage, socket: Duplex) => void;

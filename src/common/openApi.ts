@@ -145,6 +145,18 @@ function responseDoc<Meta extends SimpleMeta>(
           },
         },
       },
+      ...(meta.authentication
+        ? {
+            "401": {
+              description: "Unauthorized",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/Error" },
+                },
+              },
+            },
+          }
+        : {}),
       "5XX": {
         description: "Unexpected Error",
         content: {
@@ -163,6 +175,9 @@ function endpointDoc<Meta extends SimpleMeta>(
     [meta.method === "WS" ? "post" : meta.method.toLowerCase()]: {
       summary: meta.summary,
       description: meta.description,
+      security: meta.authentication
+        ? [{ [meta.authentication.type + "Auth"]: [] }]
+        : undefined,
       ...requestDoc(meta),
       ...responseDoc(meta),
       ...(meta.swagger || {}),
@@ -178,7 +193,40 @@ function accumulateSchemas<Meta extends SimpleMeta>(
     ? { ...schemaCat, [meta.reqSchema.id]: meta.reqSchema }
     : schemaCat;
 }
-export function generateOpenApiDocs<Meta extends SimpleMeta>(
+type SecurityScheme = [string, Record<string, string>];
+
+function accumulateSecurities<Meta extends SimpleMeta>(
+  securities: SecurityScheme[],
+  meta: Meta
+) {
+  if (!meta.authentication) {
+    return securities;
+  }
+  const securityScheme: SecurityScheme =
+    meta.authentication.type === "basic" ||
+    meta.authentication.type === "bearer"
+      ? [
+          meta.authentication.type + "Auth",
+          { type: "http", scheme: meta.authentication.type },
+        ]
+      : [
+          meta.authentication.type + "Auth",
+          {
+            type: "apiKey",
+            in: meta.authentication.type,
+            name: meta.authentication.keyPair[0],
+          },
+        ];
+  const keys = Object.keys(securityScheme[1]);
+  return [
+    ...securities.filter(([_, s]: SecurityScheme) =>
+      keys.every((key) => securityScheme[1][key] === s[key])
+    ),
+    securityScheme,
+  ];
+}
+
+export function createOpenApiSpec<Meta extends SimpleMeta>(
   api: Api<unknown, Meta>,
   additionalSwag: any,
   endpointMapping?: (
@@ -191,20 +239,28 @@ export function generateOpenApiDocs<Meta extends SimpleMeta>(
     accumulateSchemas,
     {}
   );
+
+  const securitySchemes = Object.fromEntries(
+    endpoints.reduce<SecurityScheme[]>(accumulateSecurities, [])
+  );
   const finalTouches =
     endpointMapping || ((swag: Record<string, unknown>) => swag);
   return {
     openapi: "3.0.0",
     ...additionalSwag,
     paths: Object.fromEntries(
-      flatten(api).map((meta: Meta) => [
+      endpoints.map((meta: Meta) => [
         "/" + meta.url,
         finalTouches(endpointDoc(meta), meta),
       ])
     ),
     components: {
-      schemas: { ...DEFAULT_SCHEMAS, ...knownSchemas },
-      ...additionalSwag.components,
+      schemas: {
+        ...DEFAULT_SCHEMAS,
+        ...knownSchemas,
+        ...additionalSwag.components,
+      },
+      securitySchemes,
     },
   };
 }

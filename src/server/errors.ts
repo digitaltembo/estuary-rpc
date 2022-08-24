@@ -3,6 +3,7 @@ import HTTP_STATUS_CODES from "../common/statusCodes";
 export const DEFAULT_BAD_REQUEST = "Bad Request";
 export const DEFAULT_INTERNAL_SERVER_ERROR = "Internal Server Error";
 export const DEFAULT_NOT_FOUND = "Page Not Found";
+export const DEFAULT_UNAUTHORIZED = "Unauthorized";
 
 export type ErrorResponse = {
   status: "error";

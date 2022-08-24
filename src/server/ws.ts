@@ -15,6 +15,7 @@ import {
 import {
   createErrorHandlers,
   DEFAULT_NOT_FOUND,
+  DEFAULT_UNAUTHORIZED,
   errorResponse,
 } from "./errors";
 import { getUrl, methodId } from "./middleware";
@@ -27,6 +28,7 @@ import {
   sendTextFrame,
   WsOpCode,
 } from "./wsDataFrame";
+import { isAuthenticated } from "./authentication";
 
 /**
  * Upgrade Response
@@ -158,12 +160,22 @@ export function wsEndpoint<Req, Res, Meta extends SimpleMeta>(
     const { badRequest, internalServerError } = createErrorHandlers(respond);
 
     duplex.closeClient();
+    const [proceed, auth] = isAuthenticated(
+      request,
+      meta.authentication || serverOpts.defaultAuthentication,
+      serverOpts.authenticate
+    );
+    if (!proceed) {
+      sendCloseFrame(socket, errorResponse(DEFAULT_UNAUTHORIZED));
+    }
+
     const apiContext = {
       respond,
       badRequest,
       internalServerError,
       req: request,
       socket,
+      authentication: auth,
     };
 
     if (serverOpts.middlewares) {
@@ -173,6 +185,7 @@ export function wsEndpoint<Req, Res, Meta extends SimpleMeta>(
         }
       }
     }
+
     endpoint(duplex, apiContext);
   };
 }

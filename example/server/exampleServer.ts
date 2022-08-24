@@ -1,4 +1,4 @@
-import { Duplex, SimpleFile } from "estuary-rpc";
+import { Duplex, SimpleFile, Authentication, SimpleMeta } from "estuary-rpc";
 import { ApiContext, createApiServer } from "estuary-rpc-server";
 import { IncomingMessage } from "http";
 
@@ -6,7 +6,6 @@ import {
   ExampleApi,
   exampleApiMeta,
   FooService,
-  ExampleMeta,
   SimpleForm,
 } from "./exampleApi";
 
@@ -16,8 +15,8 @@ async function simpleGet(input: string) {
 }
 const server: ExampleApi<ApiContext, unknown> = {
   foo: {
-    simplePost: async (num) => {
-      console.log("got post");
+    simplePost: async (num, { req }) => {
+      console.log("got post", req.headers);
       return num + 1;
     },
     simpleGet,
@@ -43,24 +42,7 @@ const server: ExampleApi<ApiContext, unknown> = {
   },
 };
 
-// super straightforward middleware for handling authentication
-async function dumbAuth(
-  { req, internalServerError }: ApiContext,
-  { method, needsAuth }: ExampleMeta
-) {
-  if (needsAuth) {
-    if (method === "WS") {
-      internalServerError();
-      return false;
-    } else if (req.headers["authorization"] !== "SuperSecure") {
-      internalServerError("Unauthorized");
-      return false;
-    }
-  }
-  return true;
-}
-
-createApiServer<ExampleMeta>(server, exampleApiMeta, {
+createApiServer<SimpleMeta>(server, exampleApiMeta, {
   port: 8000,
   staticFiles: {
     fileRoot: "../react-client/build/",
@@ -68,5 +50,8 @@ createApiServer<ExampleMeta>(server, exampleApiMeta, {
     defaultFile: "index.html",
     defaultCode: 200,
   },
-  middlewares: [dumbAuth],
+  authenticate: (auth: Authentication) =>
+    auth.type === "basic" &&
+    auth.username === "user" &&
+    auth.password === "password",
 });

@@ -13,9 +13,11 @@ import {
   URL_FORM_DATA_KEY,
 } from "../common/api";
 import HTTP_STATUS_CODES from "../common/statusCodes";
+import { isAuthenticated } from "./authentication";
 import {
   createErrorHandlers,
   DEFAULT_NOT_FOUND,
+  DEFAULT_UNAUTHORIZED,
   errorResponse,
 } from "./errors";
 import { automaticMiddleware, getUrl, methodId } from "./middleware";
@@ -106,7 +108,6 @@ export function restEndpoint<Req, Res, Meta extends SimpleMeta>(
         ? res.writeHead(HTTP_STATUS_CODES.NO_CONTENT).end()
         : respond(HTTP_STATUS_CODES.OK, JSON.stringify(response));
     const { badRequest, internalServerError } = createErrorHandlers(respond);
-
     try {
       const url = getUrl(req);
       const body: Req | null = await parseIncoming<Req, Res>(
@@ -114,13 +115,27 @@ export function restEndpoint<Req, Res, Meta extends SimpleMeta>(
         transport,
         url
       );
+
+      const [proceed, auth] = isAuthenticated(
+        req,
+        meta.authentication || serverOpts.defaultAuthentication,
+        serverOpts.authenticate
+      );
+      if (!proceed) {
+        respond(
+          HTTP_STATUS_CODES.UNAUTHORIZED,
+          errorResponse(DEFAULT_UNAUTHORIZED)
+        );
+        return;
+      }
+
       const apiContext: ApiContext = {
         badRequest,
         internalServerError,
         respond,
         req,
         res,
-        url,
+        authentication: auth,
       };
 
       if (serverOpts.middlewares) {
@@ -130,6 +145,7 @@ export function restEndpoint<Req, Res, Meta extends SimpleMeta>(
           }
         }
       }
+
       await endpoint(body as Req, apiContext)
         .then(success)
         .catch((error) => {

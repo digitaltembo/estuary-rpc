@@ -6,39 +6,22 @@ import "swagger-ui-react/swagger-ui.css";
 import {
   openStreamHandler,
   StreamHandler,
-  generateOpenApiDocs,
+  createOpenApiSpec,
 } from "estuary-rpc";
 
-import ClientContext, {
-  exampleApiMeta,
-  ExampleMeta,
-  SimpleForm,
-} from "./ClientContext";
-const spec = generateOpenApiDocs(
-  exampleApiMeta,
-  {
-    info: {
-      title: "Example API",
-      version: "foo.bar",
-    },
-    components: {
-      securitySchemes: {
-        SuperSecureAuth: {
-          type: "apiKey",
-          in: "header",
-          name: "authorization",
-        },
-      },
-    },
+import ClientContext, { exampleApiMeta, SimpleForm } from "./ClientContext";
+const spec = createOpenApiSpec(exampleApiMeta, {
+  info: {
+    title: "Example API",
+    version: "foo.bar",
   },
-  (incomingSwag: Record<string, unknown>, meta: ExampleMeta) =>
-    meta.needsAuth
-      ? { ...incomingSwag, security: { SuperSecureAuth: [] } }
-      : incomingSwag
-);
+});
 
 function App() {
-  const [pass, setPass] = React.useState("");
+  const [authState, setAuthState] = React.useState({
+    username: "",
+    password: "",
+  });
 
   const [text, setText] = React.useState("");
   const [form, setForm] = React.useState<SimpleForm>({
@@ -81,7 +64,6 @@ function App() {
   const submitForm = React.useCallback(
     (event: React.FormEvent) => {
       event.preventDefault();
-      console.log(client.foo.simpleGet.transport);
       client
         .formPost(form)
         .then((val: number) => toast(`Got ${val} from server`))
@@ -124,14 +106,29 @@ function App() {
       <div>
         <input
           type="text"
+          placeholder="username"
+          onChange={(e) =>
+            setAuthState(({ password }) => ({
+              password,
+              username: e.target.value,
+            }))
+          }
+          value={authState.username}
+        />
+        <input
+          type="text"
           placeholder="password"
-          onChange={(e) => setPass(e.target.value)}
-          value={pass}
+          onChange={(e) =>
+            setAuthState(({ username }) => ({
+              username,
+              password: e.target.value,
+            }))
+          }
+          value={authState.password}
         />
         <button
           onClick={() => {
-            setAuth(pass);
-            setPass("");
+            setAuth({ type: "basic", ...authState });
           }}
         >
           Login

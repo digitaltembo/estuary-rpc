@@ -1,5 +1,6 @@
 import {
   Api,
+  Authentication,
   EndpointDescription,
   SimpleMeta,
   TransportType,
@@ -14,6 +15,7 @@ export * from "../common/api";
 
 export type ClientOpts = {
   ammendXhr?: (xhr: XMLHttpRequest) => void;
+  authentication?: Authentication;
 };
 
 export type ParamMap = { [key: string]: string };
@@ -46,6 +48,7 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
   clientOpts?: ClientOpts
 ): Promise<Res> {
   const transport = meta.transport || { transportType: TransportType.JSON };
+
   return new Promise<Res>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     const url = getUrl(meta);
@@ -70,8 +73,14 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
           transport.rawStrings ? String(req) : JSON.stringify(req)
         );
       }
-      console.log("encoding as URL_FORM", Object.entries(req), url.toString());
     }
+    if (clientOpts?.authentication?.type === "query") {
+      url.searchParams.append(
+        clientOpts.authentication.keyPair[0],
+        clientOpts.authentication.keyPair[1] ?? ""
+      );
+    }
+
     xhr.open(meta.method, url.toString());
     if (opts?.timeout) {
       xhr.timeout = opts?.timeout;
@@ -84,11 +93,31 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
     }
 
     let body: XMLHttpRequestBodyInit | null = null;
+    switch (clientOpts?.authentication?.type) {
+      case "basic":
+        const { username, password } = clientOpts.authentication;
+        xhr.setRequestHeader(
+          "Authorization",
+          `Basic ${btoa(`${username}:${password}`)}`
+        );
+        break;
+      case "bearer":
+        xhr.setRequestHeader(
+          "Authorization",
+          `Bearer ${clientOpts.authentication.token}`
+        );
+        break;
+      case "header":
+        xhr.setRequestHeader(
+          clientOpts.authentication.keyPair[0],
+          clientOpts.authentication.keyPair[1] ?? ""
+        );
+        break;
+    }
     switch (transport.transportType) {
       case TransportType.JSON:
         xhr.setRequestHeader("Content-Type", "application/json");
         body = JSON.stringify(req) as string;
-        console.log("Setting JSON request", body);
         break;
       case TransportType.URL_FORM_DATA:
         xhr.setRequestHeader(
@@ -171,7 +200,8 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
 
 function createRestEndpoint<Meta extends SimpleMeta>(
   meta: Meta,
-  clientOpts?: ClientOpts
+  clientOpts?: ClientOpts,
+  authentication?: Authentication
 ): EndpointDescription<unknown, unknown, FetchArgs<unknown>, Meta> {
   const method = async (req: unknown, opts?: FetchOpts) =>
     superFetch(req, meta, opts ?? {}, clientOpts);
@@ -222,7 +252,7 @@ function createWsEndpoint<Meta extends SimpleMeta>(
   return Object.assign(method, meta);
 }
 
-export function convertApiClient<
+export function createApiClient<
   Meta extends SimpleMeta,
   CustomApi extends Api<unknown, Meta>
 >(api: CustomApi, opts?: ClientOpts): Api<FetchOpts, Meta> {
@@ -236,7 +266,7 @@ export function convertApiClient<
         fetchApi[apiName] = createRestEndpoint(meta, opts);
       }
     } else {
-      fetchApi[apiName] = convertApiClient(
+      fetchApi[apiName] = createApiClient(
         api[apiName] as Api<unknown, Meta>,
         opts
       );

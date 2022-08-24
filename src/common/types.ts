@@ -27,15 +27,19 @@ export type SimpleFile = {
   content: string;
 };
 
-export type JsonTransport = { transportType: TransportType.JSON };
-
 // If encoding a non-object in url_form_data, give it a name
 export const URL_FORM_DATA_KEY = "_es_data";
+
+// Default transport used
+export type JsonTransport = { transportType: TransportType.JSON };
+
+// Encode request values in the queryString, with most values still JSON encoded and put there
 export type UrlFormTransport = {
   transportType: TransportType.URL_FORM_DATA;
   // set this to true to treat it as a Record<string, string> instead of trying to parse as JSON
   rawStrings?: boolean;
 };
+// Encode request values in multipart/form-data, should be used for any file transmission
 export type MultipartFormTransport = {
   transportType: TransportType.MULTIPART_FORM_DATA;
   // set true to persist data to disk instead of just parsing it after the fact
@@ -43,6 +47,8 @@ export type MultipartFormTransport = {
   // set this to true to treat it as a Record<string, string> instead of trying to parse as JSON
   rawStrings?: boolean;
 };
+// Build your own Transport! Must provide definitions for encoding and decoding the Req and Res types
+// to Uint8Array.
 export type UnknownBinaryTransport<Req, Res> = {
   transportType: TransportType.UNKNOWN;
   isBinary: true;
@@ -50,6 +56,8 @@ export type UnknownBinaryTransport<Req, Res> = {
   encode: Encoder<Req, Res, WsData>;
   decode: Decoder<Req, Res, WsData>;
 };
+// Build your own Transport! Must provide definitions for encoding and decoding the Req and Res types
+// to string.
 export type UknownStringTransport<Req, Res> = {
   transportType: TransportType.UNKNOWN;
   isBinary: false | undefined;
@@ -105,10 +113,43 @@ export type Schema =
   | ArraySchema
   | ObjectSchema;
 
+export type BasicAuth = {
+  type: "basic";
+  username: string;
+  password: string;
+};
+export type BearerAuth = {
+  type: "bearer";
+  token: string;
+};
+
+export type HeaderAuth = {
+  type: "header";
+  keyPair: [string, string] | [string];
+};
+export type QueryAuth = {
+  type: "query";
+  keyPair: [string, string] | [string];
+};
+export type CookieAuth = {
+  type: "cookie";
+  keyPair: [string, string] | [string];
+};
+export type Authentication = (
+  | BasicAuth
+  | BearerAuth
+  | HeaderAuth
+  | QueryAuth
+  | CookieAuth
+) & {
+  scopes?: string[];
+};
+
 export interface SimpleMeta {
   method: Method;
   url: string;
   transport?: Transport<unknown, unknown>;
+  authentication?: Authentication;
 
   // Used for OpenAPI docs
   example?: [reqBody: unknown, resBody: unknown];
