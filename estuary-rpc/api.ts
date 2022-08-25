@@ -8,8 +8,7 @@ import {
 export * from "./types";
 export * from "./stream";
 export * from "./openApi";
-
-export * as HTTP_STATUS_CODES from "./statusCodes";
+export * from "./statusCodes";
 
 function endpoint<Req, Res, Meta extends SimpleMeta>(method: Method) {
   return (

@@ -5,13 +5,13 @@ import {
   SimpleMeta,
   TransportType,
   URL_FORM_DATA_KEY,
-} from "../common/api";
-import HTTP_STATUS_CODES from "../common/statusCodes";
-import { Duplex } from "../common/stream";
+  HTTP_STATUS_CODES,
+  Duplex,
+} from "estuary-rpc";
 
-export * from "../common/stream";
-export * from "../common/statusCodes";
-export * from "../common/api";
+console.log(HTTP_STATUS_CODES);
+
+export * from "estuary-rpc";
 
 export type ClientOpts = {
   ammendXhr?: (xhr: XMLHttpRequest) => void;

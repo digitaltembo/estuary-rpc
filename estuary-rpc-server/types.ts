@@ -1,6 +1,7 @@
 import { IncomingMessage, ServerResponse, RequestListener } from "http";
 import { Duplex } from "stream";
-import { Authentication, SimpleMeta } from "../common/api";
+
+import { Authentication, SimpleMeta } from "estuary-rpc";
 
 export type BaseApiContext = {
   respond: (status: number, message: string) => void;

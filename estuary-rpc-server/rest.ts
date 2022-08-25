@@ -11,8 +11,8 @@ import {
   Transport,
   TransportType,
   URL_FORM_DATA_KEY,
-} from "../common/api";
-import HTTP_STATUS_CODES from "../common/statusCodes";
+  HTTP_STATUS_CODES,
+} from "estuary-rpc";
 import { isAuthenticated } from "./authentication";
 import {
   createErrorHandlers,

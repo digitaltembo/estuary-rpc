@@ -1,7 +1,7 @@
+import { Authentication } from "estuary-rpc";
+
 import { IncomingMessage } from "http";
 import { getUrl } from "./middleware";
-
-import { Authentication } from "../common/api";
 
 export function getCookies(request: IncomingMessage): Record<string, string> {
   return (request.headers?.cookie?.split?.(`;`) ?? []).reduce(

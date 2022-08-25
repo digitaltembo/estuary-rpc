@@ -9,9 +9,8 @@ import {
   SimpleMeta,
   Transport,
   TransportType,
-  UknownStringTransport,
-  UnknownBinaryTransport,
-} from "../common/api";
+} from "estuary-rpc";
+
 import {
   createErrorHandlers,
   DEFAULT_NOT_FOUND,

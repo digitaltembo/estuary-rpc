@@ -2,13 +2,13 @@ import { IncomingMessage, ServerResponse } from "http";
 import { join, extname } from "path";
 import { promises as fs } from "fs";
 
+import { SimpleMeta, HTTP_STATUS_CODES } from "estuary-rpc";
+
 import {
   errorResponse,
   DEFAULT_NOT_FOUND,
   DEFAULT_INTERNAL_SERVER_ERROR,
 } from "./errors";
-import HTTP_STATUS_CODES from "../common/statusCodes";
-import { SimpleMeta } from "../common/api";
 import { ServerOpts, StaticFileOpts } from "./types";
 
 const MIME_TYPES = {

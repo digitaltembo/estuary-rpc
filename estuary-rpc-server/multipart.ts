@@ -3,7 +3,7 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import * as os from "os";
 
-import { SimpleFile } from "../common/api";
+import { SimpleFile } from "estuary-rpc";
 
 const DISPOS_RX =
   /Content-Disposition: form-data; name="(\w+)"(?:; filename="([\w\.]+)")?/i;

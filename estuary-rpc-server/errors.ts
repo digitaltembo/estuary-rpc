@@ -1,4 +1,4 @@
-import HTTP_STATUS_CODES from "../common/statusCodes";
+import { HTTP_STATUS_CODES } from "estuary-rpc";
 
 export const DEFAULT_BAD_REQUEST = "Bad Request";
 export const DEFAULT_INTERNAL_SERVER_ERROR = "Internal Server Error";

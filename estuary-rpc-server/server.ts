@@ -1,5 +1,5 @@
-import { Api, EndpointDescription, SimpleMeta } from "../common/api";
-import { Duplex } from "../common/stream";
+import { Api, EndpointDescription, SimpleMeta, Duplex } from "estuary-rpc";
+
 import { ApiContext, RestEndpoints, ServerOpts, WsEndpoints } from "./types";
 import { methodId } from "./middleware";
 import { createRestServer, restEndpoint } from "./rest";
@@ -66,9 +66,7 @@ export function createApiServer<Meta extends SimpleMeta>(
   console.log("Listening on :", serverOpts.port);
 }
 
-export * from "../common/stream";
-export * as HTTP_STATUS_CODES from "../common/statusCodes";
-export * from "../common/api";
+export * from "estuary-rpc";
 export * from "./errors";
 export * from "./middleware";
 export * from "./multipart";
