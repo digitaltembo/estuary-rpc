@@ -1,0 +1,54 @@
+name: Build and Deploy
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+permissions:
+  contents: write
+jobs:
+  build-and-deploy:
+    # concurrency: ci-${{ github.ref }} # Recommended if you intend to make multiple deployments in quick succession.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@v3
+
+      - name: Install 🧰  
+        run: |
+          npm ci
+      -name: Build 🏗
+        run: |
+          npm run build --workspaces
+
+      -name: Test ✅
+        run: |
+          mkdir out
+          npm run test-coverage
+          mv coverage out
+
+      -name: Build Docs 📚
+        run: |
+          npm run docs
+          mv docs out
+
+      - name: Extract coverage
+        uses: sergeysova/jq-action@v2
+        id: coverage
+        with:
+          cmd: 'jq .total.lines.pct coverage/coverage-summary.json'
+      - name: Build Badges
+        run: |
+          COLOR=brightgreen
+          if [ "${{steps.coverage.outputs.value}}" -lt "70" ]; then
+            COLOR=red
+          elif [ "${{steps.coverage.outputs.value}}" -lt "85" ]; then
+            COLOR=yellow
+          fi
+          cat '{"schemaVersion": 1, "label": "coverage", "message": "${{steps.coverage.outputs.value}}', "color": "$COLOR"}' > out/coverage.json
+
+      - name: Deploy 🚀
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: build # The folder the action should deploy.
+          target-folder: estuary
