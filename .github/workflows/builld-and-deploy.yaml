@@ -17,17 +17,18 @@ jobs:
       - name: Install 🧰  
         run: |
           npm ci
-      -name: Build 🏗
+      
+      - name: Build 🏗
         run: |
           npm run build --workspaces
 
-      -name: Test ✅
+      - name: Test ✅
         run: |
           mkdir out
           npm run test-coverage
           mv coverage out
 
-      -name: Build Docs 📚
+      - name: Build Docs 📚
         run: |
           npm run docs
           mv docs out
