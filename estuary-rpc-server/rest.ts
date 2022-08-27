@@ -6,7 +6,7 @@ import {
 } from "http";
 import { URL } from "url";
 import {
-  EndpointDescription,
+  Endpoint,
   SimpleMeta,
   Transport,
   TransportType,
@@ -94,7 +94,7 @@ export async function parseIncoming<Req, Res>(
 }
 
 export function restEndpoint<Req, Res, Meta extends SimpleMeta>(
-  endpoint: EndpointDescription<Req, Res, ApiContext, unknown>,
+  endpoint: Endpoint<Req, Res, ApiContext, unknown>,
   meta: Meta,
   serverOpts: ServerOpts<Meta>
 ) {

@@ -24,5 +24,15 @@
   },
   "dependencies": {
     "estuary-rpc": "^1.0.6"
+  },
+  "typedoc": {
+    "entryPoint": "./client.ts",
+    "readmeFile": "README.md",
+    "displayName": "estuary-rpc-client"
+  },
+  "devDependencies": {
+    "@types/jest": "^28.1.8",
+    "jest": "^28.0.0",
+    "ts-jest": "^28.0.8"
   }
 }

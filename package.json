@@ -1,5 +1,5 @@
 {
-  "name": "estuary-rpc-package",
+  "name": "estuary-rpc",
   "workspaces": [
     "estuary-rpc",
     "estuary-rpc-client",
@@ -9,6 +9,6 @@
     "typedoc": "^0.23.10"
   },
   "scripts": {
-    "docs": "typedoc -out docs estuary-rpc/api.ts estuary-rpc-server/server.ts estuary-rpc-client/client.ts"
+    "docs": "typedoc --entryPointStrategy packages estuary-rpc estuary-rpc-client estuary-rpc-server"
   }
 }

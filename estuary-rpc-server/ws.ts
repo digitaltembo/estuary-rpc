@@ -5,7 +5,7 @@ import { TextDecoder } from "util";
 
 import {
   Duplex,
-  EndpointDescription,
+  Endpoint,
   SimpleMeta,
   Transport,
   TransportType,
@@ -53,8 +53,16 @@ function upgradeConnection(req: IncomingMessage, socket: Socket) {
 
 const decoder = new TextDecoder();
 
+/**
+ * Creates a callback function to set up a WebSocket "endpoint"
+ * @param endpoint
+ * @param meta
+ * @param serverOpts
+ * @returns
+ * @group Server
+ */
 export function wsEndpoint<Req, Res, Meta extends SimpleMeta>(
-  endpoint: EndpointDescription<Duplex<Req, Res>, void, ApiContext, unknown>,
+  endpoint: Endpoint<Duplex<Req, Res>, void, ApiContext, unknown>,
   meta: Meta,
   serverOpts: ServerOpts<Meta>
 ) {
@@ -189,6 +197,12 @@ export function wsEndpoint<Req, Res, Meta extends SimpleMeta>(
   };
 }
 
+/**
+ * Registers the wsEndpoints to the passed in Http Server
+ * @param server
+ * @param wsEndpoints
+ * @group Server
+ */
 export function createWsServer<Meta extends SimpleMeta>(
   server: Server,
   wsEndpoints: WsEndpoints,

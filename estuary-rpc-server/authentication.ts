@@ -3,6 +3,11 @@ import { Authentication } from "estuary-rpc";
 import { IncomingMessage } from "http";
 import { getUrl } from "./middleware";
 
+/**
+ * @param request IncomingMessage from the client
+ * @returns a Record<string, string> containing all cookie name/value pairs passed in the request
+ * @group Server
+ */
 export function getCookies(request: IncomingMessage): Record<string, string> {
   return (request.headers?.cookie?.split?.(`;`) ?? []).reduce(
     (cookies, cookie) => {
@@ -21,6 +26,18 @@ export function getCookies(request: IncomingMessage): Record<string, string> {
     {}
   );
 }
+
+/**
+ * Checks authentication of a message from the client
+ * @param incoming IncomingMessage from the 'http' server
+ * @param metaAuth Description of the authentication scheme created in your API Meta definition. See
+ * {@linke estuary-rpc!Authentication} for specific types of authentication supported
+ * @param authenticate Method defined in {@link ServerOpts} that should be implemented to actually check the
+ * authentication against whatever database/backend/authorization scheme you have
+ * @returns Pair of [boolean, Authentication | undefined], where the boolean is whether the user is authenticatd,
+ * and the Authentication is the parsed authentication information if extractable
+ * @group Server
+ */
 export function isAuthenticated(
   incoming: IncomingMessage,
   metaAuth?: Authentication,

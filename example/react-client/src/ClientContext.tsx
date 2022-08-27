@@ -1,5 +1,5 @@
 import React from "react";
-import { Authentication, CommonBlob, Duplex } from "estuary-rpc";
+import { Authentication, CommonFile, Duplex } from "estuary-rpc";
 import { createApiClient, FetchOptsArg } from "estuary-rpc-client";
 
 // import { ExampleApi, exampleApiMeta } from "./exampleApi";
@@ -7,11 +7,11 @@ import { createApiClient, FetchOptsArg } from "estuary-rpc-client";
 import {
   Api,
   SimpleMeta,
-  StreamDesc,
+  StreamEndpoint,
   get,
   post,
   ws,
-  EndDesc,
+  Endpoint,
   TransportType,
 } from "estuary-rpc";
 
@@ -19,24 +19,25 @@ import {
 
 export interface ExampleApi<Closure, Meta> extends Api<Closure, Meta> {
   foo: FooService<Closure, Meta>;
-  formPost: EndDesc<SimpleForm, number, Closure, Meta>;
+  formPost: Endpoint<SimpleForm, number, Closure, Meta>;
 }
 export type SimpleForm = {
   name: string;
-  file: CommonBlob;
+  file: CommonFile;
 };
 
 export interface FooService<Closure, Meta> extends Api<Closure, Meta> {
-  simplePost: EndDesc<number, number, Closure, Meta>;
+  simplePost: Endpoint<number, number, Closure, Meta>;
 
-  simpleGet: EndDesc<string, string, Closure, Meta>;
-  authenticatedGet: EndDesc<string, string, Closure, Meta>;
+  simpleGet: Endpoint<string, string, Closure, Meta>;
+  authenticatedGet: Endpoint<string, string, Closure, Meta>;
 
-  simpleStream: StreamDesc<string, boolean, Closure, Meta>;
+  simpleStream: StreamEndpoint<string, boolean, Closure, Meta>;
 }
 
 export const exampleApiMeta: ExampleApi<unknown, SimpleMeta> = {
   foo: {
+    inUrl: get(x`api/foo/bar/${number("hi")}`)
     simplePost: post("api/foo/simplePost", { example: [17, 4] }),
     simpleGet: get("api/foo/simpleGet", { example: ["hello", "HELLO"] }),
     authenticatedGet: get("api/foo/authenticatedGet", {

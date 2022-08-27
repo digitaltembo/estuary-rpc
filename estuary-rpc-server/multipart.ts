@@ -15,6 +15,11 @@ async function openTempFile(name: string) {
   return await fs.open(path.join(folder, name), "w");
 }
 
+/**
+ * Class for parsing multipart/form-data encoded data
+ *
+ * @group Server
+ */
 export class MultiPartParser {
   private multipartData: Record<string, unknown> = {};
 
@@ -27,6 +32,13 @@ export class MultiPartParser {
   private terminus: string = "";
 
   private error: boolean;
+
+  /**
+   * @param req IncomingMessage that will be parsed in a series of chunks
+   * @param persistence If true, files will be directly written to disk and returned with a file path.
+   * Otherwise, files will be accumulated in memory into strings
+   * @param rawStrings If true, non-file formdata will be returned as raw strings instead of parsed as JSON objects
+   */
   constructor(
     req: IncomingMessage,
     public persistence?: boolean,
@@ -40,7 +52,7 @@ export class MultiPartParser {
     this.terminus = `--${boundary}--\r\n`;
   }
 
-  async parseHeaderLine(line: string) {
+  private async parseHeaderLine(line: string) {
     const dispMatch = DISPOS_RX.exec(line);
     if (dispMatch) {
       this.simpleFile.name = dispMatch[1];
@@ -52,7 +64,7 @@ export class MultiPartParser {
       this.simpleFile.contentType = contentTypeMatch[1];
     }
   }
-  async parseHeader(data: string) {
+  private async parseHeader(data: string) {
     let offset = -this.precedingPartialPart.length;
     this.precedingPartialPart += data;
     const lines = this.precedingPartialPart.split("\r\n");
@@ -80,7 +92,7 @@ export class MultiPartParser {
       this.precedingPartialPart = lines[lines.length - 1];
     }
   }
-  async completePart(data: string) {
+  private async completePart(data: string) {
     const offset = this.readingHeader ? await this.parseHeader(data) : 0;
     const restOfContent = data.endsWith(this.terminus)
       ? data.slice(offset, -this.terminus.length)
@@ -114,7 +126,7 @@ export class MultiPartParser {
     this.precedingPartialPart = "";
   }
 
-  async writePart(data: string) {
+  private async writePart(data: string) {
     const offset = this.readingHeader ? await this.parseHeader(data) : 0;
     if (!this.readingHeader) {
       if (this.persistence && this.simpleFile.contentType) {
@@ -125,6 +137,7 @@ export class MultiPartParser {
     }
   }
 
+  /** Parses a packet of information */
   async parse(data: string) {
     if (this.error) {
       return;
@@ -143,6 +156,7 @@ export class MultiPartParser {
     this.buffer = allignedParts ? "" : currentParts[currentParts.length - 1];
   }
 
+  /** Returns the current Record<string, unknown> representing data-parsed so far */
   get() {
     return this.multipartData;
   }

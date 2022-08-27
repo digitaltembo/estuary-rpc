@@ -1,3 +1,7 @@
+/**
+ * [Http Status Codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status)
+ * @group Endpoints
+ */
 export const HTTP_STATUS_CODES = {
   CONTINUE: 100,
   SWITCHING_PROTOCOLS: 101,
