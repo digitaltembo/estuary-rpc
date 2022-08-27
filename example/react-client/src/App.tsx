@@ -9,7 +9,9 @@ import {
   createOpenApiSpec,
 } from "estuary-rpc";
 
-import ClientContext, { exampleApiMeta, SimpleForm } from "./ClientContext";
+import ClientContext from "./ClientContext";
+import { exampleApiMeta, SimpleForm } from "./exampleApi";
+
 const spec = createOpenApiSpec(exampleApiMeta, {
   info: {
     title: "Example API",

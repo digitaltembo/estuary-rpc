@@ -1,19 +1,14 @@
 import { Duplex, SimpleFile, Authentication, SimpleMeta } from "estuary-rpc";
 import { ApiContext, createApiServer } from "estuary-rpc-server";
-import { IncomingMessage } from "http";
 
-import {
-  ExampleApi,
-  exampleApiMeta,
-  FooService,
-  SimpleForm,
-} from "./exampleApi";
+import { ExampleApi, exampleApiMeta, SimpleForm } from "./exampleApi";
 
 async function simpleGet(input: string) {
   console.log("processing get", input);
   return input.toUpperCase();
 }
-const server: ExampleApi<ApiContext, unknown> = {
+
+const server: ExampleApi<ApiContext> = {
   foo: {
     simplePost: async (num, { req }) => {
       console.log("got post", req.headers);
@@ -30,7 +25,7 @@ const server: ExampleApi<ApiContext, unknown> = {
       server.on("error", (err) => console.log("shoot"));
       server.on("close", () => console.log("closed"));
     },
-  } as FooService<ApiContext, unknown>,
+  },
 
   formPost: async (form: SimpleForm) => {
     console.log(
@@ -42,7 +37,7 @@ const server: ExampleApi<ApiContext, unknown> = {
   },
 };
 
-createApiServer<SimpleMeta>(server, exampleApiMeta, {
+createApiServer<SimpleMeta, ExampleApi<unknown>>(server, exampleApiMeta, {
   port: 8000,
   staticFiles: {
     fileRoot: "../react-client/build/",
