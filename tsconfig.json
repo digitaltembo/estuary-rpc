@@ -2,7 +2,13 @@
     "compilerOptions": {
         "declaration": true,
         "baseUrl": ".",
-        "lib": ["es2019"],
+        "lib": ["es2019", "dom"],
         "downlevelIteration": true,
-    }
+        "esModuleInterop": true,
+        "rootDir": ".",
+        "resolveJsonModule": true
+    },
+    "exclude": [
+        "example", "*/dist", "*.test.ts",
+    ]
 }

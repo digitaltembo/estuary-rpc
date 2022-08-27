@@ -6,13 +6,13 @@ import {
 } from "http";
 import { URL } from "url";
 import {
-  EndpointDescription,
+  Endpoint,
   SimpleMeta,
   Transport,
   TransportType,
   URL_FORM_DATA_KEY,
-} from "../common/api";
-import HTTP_STATUS_CODES from "../common/statusCodes";
+  HTTP_STATUS_CODES,
+} from "estuary-rpc";
 import { isAuthenticated } from "./authentication";
 import {
   createErrorHandlers,
@@ -94,7 +94,7 @@ export async function parseIncoming<Req, Res>(
 }
 
 export function restEndpoint<Req, Res, Meta extends SimpleMeta>(
-  endpoint: EndpointDescription<Req, Res, ApiContext, unknown>,
+  endpoint: Endpoint<Req, Res, ApiContext, unknown>,
   meta: Meta,
   serverOpts: ServerOpts<Meta>
 ) {

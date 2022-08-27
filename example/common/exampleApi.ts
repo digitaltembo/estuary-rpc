@@ -1,31 +1,31 @@
 import {
   Api,
   SimpleMeta,
-  StreamDesc,
+  StreamEndpoint,
   get,
   post,
   ws,
   EndDesc,
   TransportType,
-  CommonBlob,
+  CommonFile,
 } from "estuary-rpc";
 
 export interface ExampleApi<Closure, Meta> extends Api<Closure, Meta> {
   foo: FooService<Closure, Meta>;
-  formPost: EndDesc<SimpleForm, number, Closure, Meta>;
+  formPost: Endpoint<SimpleForm, number, Closure, Meta>;
 }
 export type SimpleForm = {
   name: string;
-  file: CommonBlob;
+  file: CommonFile;
 };
 
 export interface FooService<Closure, Meta> extends Api<Closure, Meta> {
-  simplePost: EndDesc<number, number, Closure, Meta>;
+  simplePost: Endpoint<number, number, Closure, Meta>;
 
-  simpleGet: EndDesc<string, string, Closure, Meta>;
-  authenticatedGet: EndDesc<string, string, Closure, Meta>;
+  simpleGet: Endpoint<string, string, Closure, Meta>;
+  authenticatedGet: Endpoint<string, string, Closure, Meta>;
 
-  simpleStream: StreamDesc<string, boolean, Closure, Meta>;
+  simpleStream: StreamEndpoint<string, boolean, Closure, Meta>;
 }
 
 export const exampleApiMeta: ExampleApi<unknown, SimpleMeta> = {

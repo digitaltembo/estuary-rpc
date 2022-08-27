@@ -1,0 +1,41 @@
+{
+  "name": "estuary-rpc-client",
+  "version": "1.0.6",
+  "description": "Estuary RPC is a native-TS type safe RPC system for servers and browser clients - this is the client specific implementation",
+  "bugs": {
+    "url": "https://github.com/digitaltembo/estuary-rpc/issues"
+  },
+  "keywords": [
+    "rpc",
+    "server",
+    "websocket"
+  ],
+  "author": "Nolan Hawkins",
+  "license": "MIT",
+  "homepage": "https://github.com/digitaltembo/estuary-rpc",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/digitaltembo/estuary-rpc.git"
+  },
+  "main": "client.js",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "package": "tsc && copyfiles README.md dist/estuary-rpc-server && cd dist/estuary-rpc-server && npm pack"
+  
+  },
+  "dependencies": {
+    "estuary-rpc": "^1.0.6"
+  },
+  "typedoc": {
+    "entryPoint": "./client.ts",
+    "readmeFile": "README.md",
+    "displayName": "estuary-rpc-client"
+  },
+  "devDependencies": {
+    "@types/jest": "^28.1.8",
+    "copyfiles": "^2.4.1",
+    "jest": "^28.0.0",
+    "ts-jest": "^28.0.8"
+  }
+}

@@ -1,0 +1,9 @@
+{
+    "entryPoints": [
+      "./estuary-rpc/api.ts",
+      "./estuary-rpc-server/server.ts",
+      "./estuary-rpc-client/client.ts"
+    ],
+    "out": "docs",
+    "readme": "README.md"
+}

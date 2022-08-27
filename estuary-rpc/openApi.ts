@@ -226,9 +226,41 @@ function accumulateSecurities<Meta extends SimpleMeta>(
   ];
 }
 
+/**
+ * Given an {@link Api} metadata definition, this generates an[OpenApi](https://swagger.io/docs/specification/about/)
+ * specification JSON blob, which then can be used by a variety of tooling. For estuary-rpc projects, getting
+ * documentation through one of these projects is quite straightforward
+ * - [swagger-ui](https://www.npmjs.com/package/swagger-ui) is a clientside npm package for rendering OpenAPI
+ *   documentation to a browser DOM object,
+ * - [swagger-ui-react](https://www.npmjs.com/package/swagger-ui-react) is a clientside npmpackage for
+ *   rendering OpenAPI documentation to a React component, and
+ * - [swagger-ui-dist](https://www.npmjs.com/package/swagger-ui-dist) is a serverseide npm package for rendering
+ *    OpenAPI documentation to compiled static HTML
+ * @param Meta The Meta type used by your Api metadata definition (SimpleMeta is sufficient)
+ * @param api Your Api metadata definition
+ * @param additionalSwag extend the generated api spec however you want, so that the output of this function is
+ * a valid spec. Should probably at least provide `{info: {title: "Your Title", version: "1.0.0"}}`
+ * @param endpointMapping method to postprocess the OpenAPI object representing a specific endopint given its current
+ * metadata, useful for reacting to custom Metadata used in your project
+ * @returns A
+ * @example
+ * ```ts
+ * function MySpec({api}: {api: MyApiType<unknown, MyMetaType>} ) {
+ *   const spec = createOpenApiSpec(exampleApiMeta, {
+ *     info: {
+ *       title: "Example API",
+ *       version: "foo.bar",
+ *     },
+ *   });
+ *   return <SwaggerUI spec={spec} />;
+ * }
+ * ```
+ * @group Endpoint Metadata
+ * @category OpenAPI
+ */
 export function createOpenApiSpec<Meta extends SimpleMeta>(
   api: Api<unknown, Meta>,
-  additionalSwag: any,
+  additionalSwag?: any,
   endpointMapping?: (
     currentSwaggerJson: Record<string, unknown>,
     currentMeta: Meta
@@ -247,7 +279,7 @@ export function createOpenApiSpec<Meta extends SimpleMeta>(
     endpointMapping || ((swag: Record<string, unknown>) => swag);
   return {
     openapi: "3.0.0",
-    ...additionalSwag,
+    ...(additionalSwag ?? {}),
     paths: Object.fromEntries(
       endpoints.map((meta: Meta) => [
         "/" + meta.url,
@@ -258,7 +290,7 @@ export function createOpenApiSpec<Meta extends SimpleMeta>(
       schemas: {
         ...DEFAULT_SCHEMAS,
         ...knownSchemas,
-        ...additionalSwag.components,
+        ...(additionalSwag.components ?? {}),
       },
       securitySchemes,
     },

@@ -2,13 +2,13 @@ import { IncomingMessage, ServerResponse } from "http";
 import { join, extname } from "path";
 import { promises as fs } from "fs";
 
+import { SimpleMeta, HTTP_STATUS_CODES } from "estuary-rpc";
+
 import {
   errorResponse,
   DEFAULT_NOT_FOUND,
   DEFAULT_INTERNAL_SERVER_ERROR,
 } from "./errors";
-import HTTP_STATUS_CODES from "../common/statusCodes";
-import { SimpleMeta } from "../common/api";
 import { ServerOpts, StaticFileOpts } from "./types";
 
 const MIME_TYPES = {
@@ -31,10 +31,19 @@ const MIME_TYPES = {
   ".wasm": "application/wasm",
 };
 
+/**
+ * Defines a unique string ID for all endpoints
+ * @group Server
+ */
 export function methodId(meta: { method: string; url: string }) {
   return `${meta.method}:${meta.url}`;
 }
 
+/**
+ * Parses the IncomingMessage into the URL object, useful for queryString parsing
+ * @param req
+ * @group Server
+ */
 export function getUrl(req: IncomingMessage): URL | undefined {
   let url: URL | undefined;
   try {
@@ -54,7 +63,11 @@ async function cachedDefaultContent(path?: string) {
   contentCache[path] = await fs.readFile(path).catch(() => null);
   return contentCache[path];
 }
-
+/**
+ * Method for serving the static file at filePath to a client
+ *
+ * @group Server
+ */
 export const serveStatic = async (
   _: IncomingMessage,
   res: ServerResponse,
@@ -86,7 +99,15 @@ export const serveStatic = async (
     });
 };
 
-// If requests match urlRoot, serve the file under fileRoot by that or serve a 404
+/**
+ * Creates a middleware object for serving static files. See {@link StaticFileOpts} for more detailed information
+ * Can't really imagine needing to use this directly, instead you should just define the staticFiles field in the
+ * {@link createApiServer}
+ * @param staticFileOpts
+ * @returns Static File Middles
+ *
+ * @group Server
+ */
 export const staticFileMiddleware =
   ({
     defaultFile = "404.html",
@@ -114,6 +135,10 @@ export const staticFileMiddleware =
     return false;
   };
 
+/**
+ * Gets the list of middlewares given serverOpts
+ * @group Server
+ */
 export function automaticMiddleware<Meta extends SimpleMeta>(
   serverOpts: ServerOpts<Meta>
 ) {
