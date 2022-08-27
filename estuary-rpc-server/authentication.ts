@@ -67,20 +67,19 @@ export function isAuthenticated(
     case "header":
       const header = metaAuth.keyPair[0];
       const headerValue = incoming.headers[header]?.[0] ?? "";
-      auth = { ...metaAuth, [header]: headerValue };
+      auth = { ...metaAuth, keyPair: [header, headerValue] };
       return [authenticate(auth), auth];
 
     case "query":
       const query = metaAuth.keyPair[0];
-
       const queryValue = getUrl(incoming)?.searchParams?.get?.(query) ?? "";
-      auth = { ...metaAuth, [query]: queryValue };
+      auth = { ...metaAuth, keyPair: [query, queryValue] };
       return [authenticate(auth), auth];
 
     case "cookie":
       const cookie = metaAuth.keyPair[0];
       const cookieValue = getCookies(incoming)?.[cookie] ?? "";
-      auth = { ...metaAuth, [cookie]: cookieValue };
+      auth = { ...metaAuth, keyPair: [cookie, cookieValue] };
       return [authenticate(auth), auth];
   }
 }

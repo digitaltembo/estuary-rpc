@@ -388,8 +388,8 @@ export type Authentication = (
  */
 export type BasicAuth = {
   type: "basic";
-  username: string;
-  password: string;
+  username?: string;
+  password?: string;
 };
 /**
  * {@link Authentication} that is encoded for HTTP Bearer Auth, that is by passing the header
@@ -401,7 +401,7 @@ export type BasicAuth = {
  */
 export type BearerAuth = {
   type: "bearer";
-  token: string;
+  token?: string;
 };
 
 /**

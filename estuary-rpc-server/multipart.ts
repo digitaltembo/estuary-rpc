@@ -92,13 +92,13 @@ export class MultiPartParser {
       this.precedingPartialPart = lines[lines.length - 1];
     }
   }
-  private async completePart(data: string) {
+  private async writePart(data: string) {
     const offset = this.readingHeader ? await this.parseHeader(data) : 0;
     const restOfContent = data.endsWith(this.terminus)
       ? data.slice(offset, -this.terminus.length)
       : data.slice(offset);
     if (this.simpleFile.name !== undefined) {
-      if (this.persistence) {
+      if (this.persistence && this.simpleFile.contentType) {
         this.file?.write(restOfContent);
         this.file?.close();
         this.multipartData[this.simpleFile.name ?? ""] = this.simpleFile
@@ -116,7 +116,7 @@ export class MultiPartParser {
             ? this.simpleFile.content
             : JSON.parse(this.simpleFile.content || "null");
         } catch {
-          console.log(`Failed to parse "${this.simpleFile.content}"`);
+          // don't do anything
         }
       }
     }
@@ -124,17 +124,6 @@ export class MultiPartParser {
     this.simpleFile = { content: "" };
     this.file = null;
     this.precedingPartialPart = "";
-  }
-
-  private async writePart(data: string) {
-    const offset = this.readingHeader ? await this.parseHeader(data) : 0;
-    if (!this.readingHeader) {
-      if (this.persistence && this.simpleFile.contentType) {
-        this.file?.write(data.slice(offset));
-      } else {
-        this.simpleFile.content += data.slice(offset);
-      }
-    }
   }
 
   /** Parses a packet of information */
@@ -146,11 +135,7 @@ export class MultiPartParser {
     let currentParts = this.buffer.split(this.boundary);
     const allignedParts = currentParts[currentParts.length - 1] === "";
     for (let i = 0; i < currentParts.length; i++) {
-      if (i < currentParts.length + 1 || allignedParts) {
-        await this.completePart(currentParts[i]);
-      } else {
-        await this.writePart(currentParts[i]);
-      }
+      await this.writePart(currentParts[i]);
     }
 
     this.buffer = allignedParts ? "" : currentParts[currentParts.length - 1];

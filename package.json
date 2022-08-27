@@ -1,5 +1,5 @@
 {
-  "name": "estuary-rpc",
+  "name": "estuary-rpc-proj",
   "workspaces": [
     "estuary-rpc",
     "estuary-rpc-client",
@@ -9,6 +9,8 @@
     "typedoc": "^0.23.10"
   },
   "scripts": {
+    "test": "jest",
+    "test-coverage": "jest --coverage",
     "docs": "typedoc --entryPointStrategy packages estuary-rpc estuary-rpc-client estuary-rpc-server"
   }
 }

@@ -6,8 +6,9 @@
         "downlevelIteration": true,
         "esModuleInterop": true,
         "rootDir": ".",
+        "resolveJsonModule": true
     },
     "exclude": [
-        "example", "*/dist",
+        "example", "*/dist", "*.test.ts",
     ]
 }
