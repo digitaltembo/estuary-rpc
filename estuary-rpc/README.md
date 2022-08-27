@@ -19,28 +19,22 @@ npm install estuary-rpc
 
 # Usage
 Within the common project, it will be necessary to define 3 things:
-* The Meta type used to describe all your endpoints. It may be sufficient to use `import { SimpleMeta } from "estuary-rpc";`
-* The Api type used in the interface. This type can be arbitrarily nested, but each "leaf" field must be either `Endpoint<[Req], [Res], Closure, Meta>` or `StreamEndpoint<[Req], [Res], Closure, Meta>`, where `Req` and `Res` are specific types and `Closure` and `Meta` are genericized
-  * For instance, this would define a ExampleApi:
-```
-export interface ExampleApi<Closure, Meta> extends Api<Closure, Meta> {
-  foo: FooService<Closure, Meta>;
-  fileUpload: Endpoint<void, void, Closure, Meta>;
-}
+* The Meta type used to describe all your endpoints. It may be sufficient to use SimpleMeta, in which case the Meta type can simple be left off your endpoint metadata definitions in the next section
 
-export interface FooService<Closure, Meta> extends Api<Closure, Meta> {
-  simpleGet: Endpoint<number, number, Closure, Meta>;
-  simpleStream: StreamEndpoint<string, boolean, Closure, Meta>;
-}
-```
-* The Api Metadata Definition, implementing your Api type genericized over your Meta type and an unknown closure. This will use the `get`, `post`, `put`, `del`, or `ws` methods defined in `estuary-rpc-common` to define the metadata about the given REST or WS endpoint definitions - most importantly the URL at which the endpoint will be accessed, but also any other metadata/auth requirements/upload definitions should go here. For Example:
-```
-export const exampleApiMeta: ExampleApi<never, ExampleMeta> = {
+* Your API metadata definition. This will use the [get](http://digitaltembo.github.io/estuary-rpc/functions/estuary_rpc.get.html), [post](http://digitaltembo.github.io/estuary-rpc/functions/estuary_rpc.post.html), [put](http://digitaltembo.github.io/estuary-rpc/functions/estuary_rpc.put.html), [del](http://digitaltembo.github.io/estuary-rpc/functions/estuary_rpc.del.html), or [ws](http://digitaltembo.github.io/estuary-rpc/functions/estuary_rpc.ws.html)  methods defined in `estuary-rpc` to define the metadata about the given REST or WS endpoint definitions - most importantly the URL at which the endpoint will be accessed, but also any other metadata/auth requirements/upload definitions should go here. For Example:
+```ts
+export const exampleApiMeta = {
   foo: {
-    emptyPost: post("foo/emptyPost"),
-    simpleGet: get("foo/simpleGet", { needsAuth: true }),
-    simpleStream: ws("foo/simpleStream"),
+    emptyPost: post<number, number, ExampleMeta>("foo/emptyPost"),
+    simpleGet: get<string, string, ExampleMeta>("foo/simpleGet", { needsAuth: true }),
+    simpleStream: ws<Foo, Bar, ExampleMeta>("foo/simpleStream"),
   },
-  fileUpload: post("fileUpload", { uploads: ["someFile.txt"] }),
+  fileUpload: post<void, null, ExampleMeta>("fileUpload", { uploads: ["someFile.txt"] }),
 };
+```
+* Your API type, inferred from your API metadata definition like so:
+```ts
+export type ExampleApi<Closure> = ApiTypeof<Closure, ExamlpeMeta, typeof exampleApiMeta>;
+// You may also want to define the service types individually, for implementing them one at a time:
+export type FooService<Closure> = ExampleApi<Closure>["foo"];
 ```

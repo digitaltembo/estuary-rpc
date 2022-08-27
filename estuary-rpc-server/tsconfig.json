@@ -3,5 +3,5 @@
   "compilerOptions": {
     "outDir": "dist"
   },
-  "include": ["./package.json", "*.ts"]
+  "include": [ "server.ts"]
 }

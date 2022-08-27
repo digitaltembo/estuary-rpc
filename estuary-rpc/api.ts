@@ -13,7 +13,9 @@ export * from "./statusCodes";
  * @group Endpoint Metadata
  * @category Metadata Definition
  */
-function endpoint<Req, Res, Meta extends SimpleMeta>(method: Method) {
+function endpoint<Req, Res, Meta extends SimpleMeta = SimpleMeta>(
+  method: Method
+) {
   return (
     url: string,
     defaultTransport: TransportType.JSON | TransportType.URL_FORM_DATA,
@@ -39,7 +41,7 @@ function endpoint<Req, Res, Meta extends SimpleMeta>(method: Method) {
  * @group Endpoint Metadata
  * @category Metadata Definition
  */
-export function get<Req, Res, Meta extends SimpleMeta>(
+export function get<Req, Res, Meta extends SimpleMeta = SimpleMeta>(
   url: string,
   opts?: Omit<Meta, "method" | "url">
 ) {
@@ -57,7 +59,7 @@ export function get<Req, Res, Meta extends SimpleMeta>(
  * @group Endpoint Metadata
  * @category Metadata Definition
  */
-export function post<Req, Res, Meta extends SimpleMeta>(
+export function post<Req, Res, Meta extends SimpleMeta = SimpleMeta>(
   url: string,
   opts?: Omit<Meta, "method" | "url">
 ) {
@@ -72,7 +74,7 @@ export function post<Req, Res, Meta extends SimpleMeta>(
  * @group Endpoint Metadata
  * @category Metadata Definition
  */
-export function put<Req, Res, Meta extends SimpleMeta>(
+export function put<Req, Res, Meta extends SimpleMeta = SimpleMeta>(
   url: string,
   opts?: Omit<Meta, "method" | "url">
 ) {
@@ -86,7 +88,7 @@ export function put<Req, Res, Meta extends SimpleMeta>(
  * @group Endpoint Metadata
  * @category Metadata Definition
  */
-export function del<Req, Res, Meta extends SimpleMeta>(
+export function del<Req, Res, Meta extends SimpleMeta = SimpleMeta>(
   url: string,
   opts?: Omit<Meta, "method" | "url">
 ) {
@@ -102,7 +104,7 @@ export function del<Req, Res, Meta extends SimpleMeta>(
  * @group Endpoint Metadata
  * @category Metadata Definition
  */
-export function ws<Req, Res, Meta extends SimpleMeta>(
+export function ws<Req, Res, Meta extends SimpleMeta = SimpleMeta>(
   url: string,
   opts?: Omit<Meta, "method" | "url">
 ) {

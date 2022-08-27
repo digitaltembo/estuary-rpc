@@ -35,7 +35,7 @@ const MIME_TYPES = {
  * Defines a unique string ID for all endpoints
  * @group Server
  */
-export function methodId(meta: { method: string; url: string }) {
+export function methodId(meta: { method?: string; url?: string }) {
   return `${meta.method}:${meta.url}`;
 }
 
