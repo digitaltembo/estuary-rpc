@@ -26,30 +26,25 @@ jobs:
         run: |
           mkdir out
           npm run test-coverage
-          mv coverage out
+          mv coverage/lcov-report out/coverage
 
       - name: Build Docs 📚
         run: |
           npm run docs
-          mv docs out
+          mv docs/* out
 
-      - name: Extract coverage
-        uses: sergeysova/jq-action@v2
-        id: coverage
-        with:
-          cmd: 'jq .total.lines.pct coverage/coverage-summary.json'
       - name: Build Badges
         run: |
           COLOR=brightgreen
-          if [ "${{steps.coverage.outputs.value}}" -lt "70" ]; then
+          COVERAGE=$(perl -ne 'm/{"total": {"lines":{[a-z0-9",:]+"pct":([0-9]+)/ && print "$1"' coverage/coverage-summary.json) 
+          if [ "$COVERAGE" -lt "70" ]; then
             COLOR=red
-          elif [ "${{steps.coverage.outputs.value}}" -lt "85" ]; then
+          elif [ "$COVERAGE" -lt "85" ]; then
             COLOR=yellow
           fi
-          cat '{"schemaVersion": 1, "label": "coverage", "message": "${{steps.coverage.outputs.value}}', "color": "$COLOR"}' > out/coverage.json
+          echo '{"schemaVersion": 1, "label": "coverage", "message": "'$COVERAGE'", "color": "'$COLOR'"}' > out/coverage.json
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: build # The folder the action should deploy.
-          target-folder: estuary
+          folder: out # The folder the action should deploy.
