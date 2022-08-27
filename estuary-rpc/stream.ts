@@ -238,6 +238,15 @@ export class Duplex<In, Out> {
    * @param inFn transformation for input message types
    * @param outFn transformation for output message types
    * @returns New duplex
+   * @example
+   * ```ts
+   * const isTrueEndpoint = async ({server}}: Duplex<boolean, string>) => {
+   *   server.on("message", (b) => server.write(b ? "true" : "false"));
+   * }
+   * // Forward requests from otherEndpoint to endpoint, and forward responses back
+   * const isEvenEndpoint = async (dup: Duplex<number, string>) =>
+   *   isTrueEndpoint(dup.map((n: number) => n % 2 === 0, (s) => s));
+   * ```
    */
   map<NewIn, NewOut>(
     inFn: (input: NewIn) => In,
