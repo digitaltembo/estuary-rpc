@@ -22,7 +22,7 @@ export type ClientOpts = {
    */
   ammendXhr?: (xhr: XMLHttpRequest) => void;
   /** Authentication data to be attatched to XmlHttpRequests */
-  authentication?: Authentication;
+  authentication?: Authentication | Authentication[];
 };
 
 /**
@@ -76,6 +76,12 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
 ): Promise<Res> {
   const transport = meta.transport || { transportType: TransportType.JSON };
 
+  const auths = clientOpts?.authentication
+    ? Array.isArray(clientOpts.authentication)
+      ? clientOpts.authentication
+      : [clientOpts.authentication]
+    : [];
+
   return new Promise<Res>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     const url = getUrl(meta);
@@ -84,7 +90,10 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
         url.searchParams.append(key, opts.params[key]);
       }
     }
-    if (transport.transportType === TransportType.URL_FORM_DATA) {
+    if (
+      transport.transportType === TransportType.URL_FORM_DATA &&
+      req != null
+    ) {
       // pinky swear that req is of type Record<string, unknown>
       if (typeof req === "object") {
         Object.entries(req ?? {}).map(([key, value]) =>
@@ -101,12 +110,11 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
         );
       }
     }
-    if (clientOpts?.authentication?.type === "query") {
-      url.searchParams.append(
-        clientOpts.authentication.keyPair[0],
-        clientOpts.authentication.keyPair[1] ?? ""
-      );
-    }
+    auths.forEach((auth) => {
+      if (auth?.type === "query") {
+        url.searchParams.append(auth.keyPair[0], auth.keyPair[1] ?? "");
+      }
+    });
 
     xhr.open(meta.method, url.toString());
     if (opts?.timeout) {
@@ -120,27 +128,24 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
     }
 
     let body: XMLHttpRequestBodyInit | null = null;
-    switch (clientOpts?.authentication?.type) {
-      case "basic":
-        const { username, password } = clientOpts.authentication;
-        xhr.setRequestHeader(
-          "Authorization",
-          `Basic ${btoa(`${username}:${password}`)}`
-        );
-        break;
-      case "bearer":
-        xhr.setRequestHeader(
-          "Authorization",
-          `Bearer ${clientOpts.authentication.token}`
-        );
-        break;
-      case "header":
-        xhr.setRequestHeader(
-          clientOpts.authentication.keyPair[0],
-          clientOpts.authentication.keyPair[1] ?? ""
-        );
-        break;
-    }
+    auths.forEach((auth) => {
+      switch (auth?.type) {
+        case "basic":
+          const { username, password } = auth;
+          xhr.setRequestHeader(
+            "Authorization",
+            `Basic ${btoa(`${username}:${password}`)}`
+          );
+          break;
+        case "bearer":
+          xhr.setRequestHeader("Authorization", `Bearer ${auth.token}`);
+          break;
+        case "header":
+          xhr.setRequestHeader(auth.keyPair[0], auth.keyPair[1] ?? "");
+          auth;
+          break;
+      }
+    });
     switch (transport.transportType) {
       case TransportType.JSON:
         xhr.setRequestHeader("Content-Type", "application/json");
@@ -227,8 +232,7 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
 
 function createRestEndpoint<Meta extends SimpleMeta>(
   meta: Meta,
-  clientOpts?: ClientOpts,
-  authentication?: Authentication
+  clientOpts?: ClientOpts
 ): Endpoint<unknown, unknown, FetchArgs<unknown>, Meta> {
   const method = async (req: unknown, opts?: FetchOpts) =>
     superFetch(req, meta, opts ?? {}, clientOpts);

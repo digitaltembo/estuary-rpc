@@ -37,12 +37,12 @@ jobs:
         run: |
           COLOR=brightgreen
           COVERAGE=$(perl -ne 'm/{"total": {"lines":{[a-z0-9",:]+"pct":([0-9]+)/ && print "$1"' coverage/coverage-summary.json) 
-          if [ "$COVERAGE" -lt "70" ]; then
+          if [ "$COVERAGE" -lt "50" ]; then
             COLOR=red
-          elif [ "$COVERAGE" -lt "85" ]; then
+          elif [ "$COVERAGE" -lt "80" ]; then
             COLOR=yellow
           fi
-          echo '{"schemaVersion": 1, "label": "coverage", "message": "'$COVERAGE'", "color": "'$COLOR'"}' > out/coverage.json
+          echo '{"schemaVersion": 1, "label": "coverage", "message": "'$COVERAGE'%", "color": "'$COLOR'"}' > out/coverage.json
 
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4

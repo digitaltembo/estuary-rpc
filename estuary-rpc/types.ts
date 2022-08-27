@@ -96,12 +96,12 @@ export type StreamEndpoint<Req, Res, Closure, Meta> = Endpoint<
  * ```ts
  * export interface ExampleApi<Closure, Meta> extends Api<Closure, Meta> {
  *   foo: FooService<Closure, Meta>;
- *   fileUpload: EndDesc<void, void, Closure, Meta>;
+ *   fileUpload: Endpoint<void, void, Closure, Meta>;
  * }
  *
  * export interface FooService<Closure, Meta> extends Api<Closure, Meta> {
- *   simpleGet: EndDesc<number, number, Closure, Meta>;
- *   simpleStream: StreamDesc<string, boolean, Closure, Meta>;
+ *   simpleGet: Endpoint<number, number, Closure, Meta>;
+ *   simpleStream: StreamEndpoint<string, boolean, Closure, Meta>;
  * }
  * ```
  */
