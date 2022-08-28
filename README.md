@@ -1,4 +1,4 @@
-<h1 align="center">Estuary RPC</h1>
+<img align="center" alt="Estuary-RPC" src="https://user-images.githubusercontent.com/4743325/187093151-ce7dae3b-6893-4276-a889-4e2469881b17.png" />
 <p align="center">
   <a href="https://github.com/digitaltembo/estuary-rpc/actions/workflows/builld-and-deploy.yaml">
     <img alt="Build & Deploy" 
@@ -41,7 +41,9 @@ import { Api, Endpoint, get, SimpleMeta } from "estuary-rpc";
 
 // define metadata for your interface, to be used by client and server
 export const myApiMeta: MyApi<unknown, SimpleMeta> = {
-  foo: get<void, string>("foo"),
+  // foo will be an endpoint that takes a number, returns a string, and will be translated into 
+  // a GET request with the number sent over URL form encoding to the url /foo
+  foo: get<number, string>("foo"),
 };
 
 export type MyApi<Closure, Meta> = ApiTypeOf<Closure, Meta, typeof myApiMeta>;
