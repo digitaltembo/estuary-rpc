@@ -186,7 +186,10 @@
 <a name='L121'></a><a href='#L121'>121</a>
 <a name='L122'></a><a href='#L122'>122</a>
 <a name='L123'></a><a href='#L123'>123</a>
-<a name='L124'></a><a href='#L124'>124</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -293,32 +296,35 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { Api, Endpoint, SimpleMeta, Duplex } from "estuary-rpc";
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { Api, Endpoint, SimpleMeta, Duplex, ApiTypeOf } from "estuary-rpc";
 &nbsp;
 import { ApiContext, RestEndpoints, ServerOpts, WsEndpoints } from "./types";
 <span class="cstat-no" title="statement not covered" >import { methodId } from "./middleware";</span>
 <span class="cstat-no" title="statement not covered" >import { createRestServer, restEndpoint } from "./rest";</span>
 <span class="cstat-no" title="statement not covered" >import { createWsServer, wsEndpoint } from "./ws";</span>
 &nbsp;
-function <span class="fstat-no" title="function not covered" >flattenApi&lt;</span>Meta extends SimpleMeta&gt;(
-  api: Api&lt;ApiContext, unknown&gt;,
-  apiMeta: Api&lt;unknown, Meta&gt;,
+function <span class="fstat-no" title="function not covered" >flattenApi&lt;</span>T extends Api&lt;unknown, Meta&gt;, Meta extends SimpleMeta&gt;(
+  api: ApiTypeOf&lt;ApiContext, unknown, T&gt;,
+  apiMeta: ApiTypeOf&lt;unknown, Meta, T&gt;,
   serverOpts: ServerOpts&lt;Meta&gt;
 ): [RestEndpoints, WsEndpoints] {
   const restEndpoints: RestEndpoints = <span class="cstat-no" title="statement not covered" >{};</span>
@@ -347,8 +353,8 @@ function <span class="fstat-no" title="function not covered" >flattenApi&lt;</sp
       }
     } else {
       const [childRest, childWs] = <span class="cstat-no" title="statement not covered" >flattenApi(</span>
-        api[apiName] as Api&lt;ApiContext, unknown&gt;,
-        apiMeta[apiName] as Api&lt;unknown, Meta&gt;,
+        api[apiName] as any,
+        apiMeta[apiName] as any,
         serverOpts
       );
 <span class="cstat-no" title="statement not covered" >      Object.assign(restEndpoints, childRest);</span>
@@ -411,12 +417,15 @@ function <span class="fstat-no" title="function not covered" >flattenApi&lt;</sp
  * ```
  * @group Server
  */
-<span class="cstat-no" title="statement not covered" >export function <span class="fstat-no" title="function not covered" >c</span>reateApiServer&lt;</span>Meta extends SimpleMeta&gt;(
-  api: Api&lt;ApiContext, unknown&gt;,
-  description: Api&lt;unknown, Meta&gt;,
+<span class="cstat-no" title="statement not covered" >export function <span class="fstat-no" title="function not covered" >c</span>reateApiServer&lt;</span>
+  Meta extends SimpleMeta,
+  T extends Api&lt;unknown, Meta&gt;
+&gt;(
+  api: ApiTypeOf&lt;ApiContext, unknown, T&gt;,
+  apiMeta: ApiTypeOf&lt;unknown, Meta, T&gt;,
   serverOpts: ServerOpts&lt;Meta&gt;
 ) {
-  const [restEndpoints, wsEndpoints] = <span class="cstat-no" title="statement not covered" >flattenApi(api, description, serverOpts);</span>
+  const [restEndpoints, wsEndpoints] = <span class="cstat-no" title="statement not covered" >flattenApi(api, apiMeta, serverOpts);</span>
 &nbsp;
   const server = <span class="cstat-no" title="statement not covered" >createRestServer(restEndpoints, serverOpts);</span>
 <span class="cstat-no" title="statement not covered" >  createWsServer(server, wsEndpoints, serverOpts);</span>
@@ -439,7 +448,7 @@ function <span class="fstat-no" title="function not covered" >flattenApi&lt;</sp
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2022-08-27T18:41:02.490Z
+                at 2022-08-28T00:00:50.758Z
             </div>
         <script src="../prettify.js"></script>
         <script>

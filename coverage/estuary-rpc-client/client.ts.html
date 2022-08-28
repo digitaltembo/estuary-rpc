@@ -420,7 +420,11 @@
 <a name='L355'></a><a href='#L355'>355</a>
 <a name='L356'></a><a href='#L356'>356</a>
 <a name='L357'></a><a href='#L357'>357</a>
-<a name='L358'></a><a href='#L358'>358</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L358'></a><a href='#L358'>358</a>
+<a name='L359'></a><a href='#L359'>359</a>
+<a name='L360'></a><a href='#L360'>360</a>
+<a name='L361'></a><a href='#L361'>361</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -762,6 +766,9 @@
 <span class="cline-any cline-yes">21x</span>
 <span class="cline-any cline-yes">21x</span>
 <span class="cline-any cline-yes">41x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">31x</span>
 <span class="cline-any cline-yes">31x</span>
 <span class="cline-any cline-yes">10x</span>
@@ -769,10 +776,9 @@
 <span class="cline-any cline-yes">21x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">10x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">21x</span>
@@ -786,6 +792,7 @@
   URL_FORM_DATA_KEY,
   HTTP_STATUS_CODES,
   Duplex,
+  ApiTypeOf,
 } from "estuary-rpc";
 &nbsp;
 export * from "estuary-rpc";
@@ -826,7 +833,7 @@ export type FetchArgs&lt;T&gt; = FetchOpts &amp; {
  * to pass undefined everytime we don't care about the request type
  * @group Client
  */
-export type FetchOptsArg = FetchOpts | void;
+export type ClientClosure = FetchOpts | void;
 &nbsp;
 /** Returns the URL of a given metadata */
 export function getUrl(meta: SimpleMeta) {
@@ -1009,18 +1016,18 @@ export function superFetch&lt;Req, Res, Meta extends SimpleMeta&gt;(
   });
 }
 &nbsp;
-function createRestEndpoint&lt;Meta extends SimpleMeta&gt;(
+function createRestEndpoint&lt;Req, Res, Meta extends SimpleMeta&gt;(
   meta: Meta,
   clientOpts?: ClientOpts
-): Endpoint&lt;unknown, unknown, FetchArgs&lt;unknown&gt;, Meta&gt; {
-  const method = async (req: unknown, opts?: FetchOpts) =&gt;
-    superFetch(req, meta, <span class="branch-0 cbranch-no" title="branch not covered" >opts </span>?? {}, clientOpts);
+): Endpoint&lt;Req, Res, FetchArgs&lt;Req&gt;, Meta&gt; {
+  const method = async (req: Req, opts: FetchArgs&lt;Req&gt;) =&gt;
+    superFetch(req, meta, <span class="branch-0 cbranch-no" title="branch not covered" >opts </span>?? {}, clientOpts) as Promise&lt;Res&gt;;
   return Object.assign(method, meta);
 }
-function createWsEndpoint&lt;Meta extends SimpleMeta&gt;(
+function createWsEndpoint&lt;Req, Res, Meta extends SimpleMeta&gt;(
   meta: Meta,
   _?: ClientOpts
-): Endpoint&lt;Duplex&lt;unknown, unknown&gt;, void, FetchOpts, Meta&gt; {
+): Endpoint&lt;Duplex&lt;Req, Res&gt;, void, FetchOpts, Meta&gt; {
   const transport = meta.transport || <span class="branch-1 cbranch-no" title="branch not covered" >{ transportType: TransportType.JSON };</span>
 &nbsp;
   const method = async (duplex: Duplex&lt;unknown, unknown&gt;) =&gt; {
@@ -1115,24 +1122,26 @@ function createWsEndpoint&lt;Meta extends SimpleMeta&gt;(
 export function createApiClient&lt;
   Meta extends SimpleMeta,
   CustomApi extends Api&lt;unknown, Meta&gt;
-&gt;(api: CustomApi, opts?: ClientOpts): Api&lt;FetchOpts, Meta&gt; {
-  const fetchApi: Api&lt;FetchOpts, Meta&gt; = {};
-  Object.keys(api).forEach((apiName: string) =&gt; {
+&gt;(api: CustomApi, opts?: ClientOpts): ApiTypeOf&lt;FetchOpts, Meta, CustomApi&gt; {
+  const fetchApi: Partial&lt;ApiTypeOf&lt;FetchOpts, Meta, CustomApi&gt;&gt; = {};
+  Object.keys(api).forEach((apiName: keyof CustomApi) =&gt; {
     if (typeof api[apiName] === "function") {
-      const meta = api[apiName] as Meta;
+      // this SHOULD ensure that api[apiName]: Endpoint&lt;Req, Res, unknown, Meta&gt;;
+      // but I have not been able to convince typescript of that fact
+      // so we have to use a few any's here
+      const meta = api[apiName] as unknown as Meta;
       if (meta.method === "WS") {
-        fetchApi[apiName] = createWsEndpoint(meta, opts);
+        fetchApi[apiName] = createWsEndpoint(meta, opts) as any;
       } else {
-        fetchApi[apiName] = createRestEndpoint(meta, opts);
+        fetchApi[apiName] = createRestEndpoint(meta, opts) as any;
       }
     } else {
-      fetchApi[apiName] = createApiClient(
-        api[apiName] as Api&lt;unknown, Meta&gt;,
-        opts
-      );
+      // Likewise, this should ensure that api[apiName]: ApiTypeOf&lt;unknown, Meta, CustomApi&gt;[typeof apiName]
+      // and that therefore this is valid...but typescript remains unconvinced
+      fetchApi[apiName] = createApiClient(api[apiName] as any, opts) as any;
     }
   });
-  return fetchApi;
+  return fetchApi as ApiTypeOf&lt;FetchOpts, Meta, typeof api&gt;;
 }
 &nbsp;</pre></td></tr></table></pre>
 
@@ -1141,7 +1150,7 @@ export function createApiClient&lt;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2022-08-27T18:41:02.490Z
+                at 2022-08-28T00:00:50.758Z
             </div>
         <script src="../prettify.js"></script>
         <script>
