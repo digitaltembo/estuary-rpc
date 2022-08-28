@@ -17,11 +17,12 @@
     "type": "git",
     "url": "https://github.com/digitaltembo/estuary-rpc.git"
   },
-  "main": "client.js",
+  "main": "./dist/estuary-rpc-client/client.js",
+  "files": ["README.md", "dist"],
   "scripts": {
     "build": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "package": "tsc && copyfiles README.md dist/estuary-rpc-server && cd dist/estuary-rpc-server && npm pack"
+    "package": "tsc && npm pack"
   
   },
   "dependencies": {
@@ -34,7 +35,6 @@
   },
   "devDependencies": {
     "@types/jest": "^28.1.8",
-    "copyfiles": "^2.4.1",
     "jest": "^28.0.0",
     "ts-jest": "^28.0.8"
   }

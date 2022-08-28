@@ -1,17 +1,37 @@
-
 <h1 align="center">Estuary RPC</h1>
 <p align="center">
- <a href="https://github.com/digitaltembo/estuary-rpc/actions/workflows/builld-and-deploy.yaml"><img alt="Build & Deploy" src="https://github.com/digitaltembo/estuary-rpc/actions/workflows/builld-and-deploy.yaml/badge.svg"></a>
- <a href="https://digitaltembo.github.io/estuary-rpc/coverage/"><img alt="Coverage" src="https://img.shields.io/endpoint?url=https://digitaltembo.github.io/estuary-rpc/coverage.json"></a>
- <a href="https://www.npmjs.com/package/estuary-rpc"><img alt="npm" src="https://img.shields.io/npm/v/estuary-rpc"></a>
- <a href="https://digitaltembo.github.io/estuary-rpc/"><img alt="Documentation" src="https://img.shields.io/static/v1?label=Docs&message=passing&color=brightgreen"></a>
+  <a href="https://github.com/digitaltembo/estuary-rpc/actions/workflows/builld-and-deploy.yaml">
+    <img alt="Build & Deploy" 
+         src="https://github.com/digitaltembo/estuary-rpc/actions/workflows/builld-and-deploy.yaml/badge.svg">
+  </a>
+  <a href="https://digitaltembo.github.io/estuary-rpc/coverage/">
+    <img alt="Coverage" 
+         src="https://img.shields.io/endpoint?url=https://digitaltembo.github.io/estuary-rpc/coverage.json">
+  </a>
+  <a href="https://www.npmjs.com/package/estuary-rpc">
+    <img alt="npm"
+         src="https://img.shields.io/npm/v/estuary-rpc">
+  </a>
+  <a href="https://digitaltembo.github.io/estuary-rpc/">
+    <img alt="Documentation" 
+         src="https://img.shields.io/static/v1?label=docs&message=passing&color=brightgreen">
+  </a>
 </p>
 
-Estuary RPC is an attempt to make an extremely simple (toy) RPC system in TypeScript for use between browsers and Node.js servers that:
+Estuary RPC is an attempt to make an extremely simple RPC system in TypeScript for use between browsers and Node.js servers that:
 
 - is typesafe, with all types simply defined in TypeScript - meaning your code won't compile if the server or the client code is not invoked with the correct types for the given RPC call
 - supports most desired operations between client and server (REST methods, WebSocket streams, status codes, file uploads, automatic authentication) transparently with respect to the function calls and definitions
 - doesn't have external dependencies
+
+As a system, Estuary RPC replaces
+- clientside calls to `fetch`, `new XmlHttpRequest()`, and `new WebSocket()` - all such calls just go through a typesafe client object
+- serverside use of `Express` and other http servers, `ws` and other WebSocket server, `multer`/`busboy` and other file/form parsing libraries
+- full rpc solutions such as `gRPC`
+
+It is NOT and does not endeavor to be a web-framework, specifically being extremely unopinionated about UI frameworks (you just need JS), security (it will parse security tokens from requests, but deciding what to do with them is up to you), or databases.
+
+It was inspired by me passing a JSON object `{"heightCM": 123}` to a server when `{"height": 123}` was needed, and being quite frustrated by the fact that *the main benefit* of using a JS backend is to share types with the frontend, but rarely are the types living on the interface actually enforced.
 
 ## Sample Code
 As a quick taste, here is how to define a complete typesafe client and server in estuary-rpc:
@@ -19,14 +39,13 @@ As a quick taste, here is how to define a complete typesafe client and server in
 ```ts
 import { Api, Endpoint, get, SimpleMeta } from "estuary-rpc";
 
-// define interface type, may be a nested object to group endpoints together
-export interface MyApi<Closure, Meta> extends Api<Closure, Meta> {
-  foo: Endpoint<number, string, Closure, Meta>;
-}
 // define metadata for your interface, to be used by client and server
 export const myApiMeta: MyApi<unknown, SimpleMeta> = {
-  foo: get("foo"),
+  foo: get<void, string>("foo"),
 };
+
+export type MyApi<Closure, Meta> = ApiTypeOf<Closure, Meta, typeof myApiMeta>;
+
 ```
 ### Server Code
 ```ts
@@ -122,7 +141,7 @@ The transport metadata determines the method by which the arguments to the endpo
 It is fairly straightforward to build your own authentication process using a custom Metadata type to annotate how individual endpoints should be authenticated, and a custom [Middleware](http://digitaltembo.github.io/estuary-rpc/types/estuary_rpc_server.Middleware.html) - but that is not necessarily necessary. There are builtins for simple Basic, Bearer, Cookie, query param, and custom header-based authentication schemas, that encode authentication values passed into the [createApiClient](http://digitaltembo.github.io/estuary-rpc/functions/estuary_rpc_client.createApiClient.html) into the logical parts of the request and in turn parse those values at the server side, for usage, simply 
 
 1. Pass an [Authentication](http://digitaltembo.github.io/estuary-rpc/types/estuary_rpc.Authentication.html) object without the secret defined in your endpoint definition function (or alternatively, pass it as a `defaultAuthentication` in your [ServerOpts](http://digitaltembo.github.io/estuary-rpc/types/estuary_rpc_server.ServerOpts.html) to make the server check authentication by default)
-2. Pass an [Authentication](http://digitaltembo.github.io/estuary-rpc/types/estuary_rpc.Authentication.html) object *with* the secret defined to `[createApiClient](http://digitaltembo.github.io/estuary-rpc/functions/estuary_rpc_client.createApiClient.html) on your client side
+2. Pass an [Authentication](http://digitaltembo.github.io/estuary-rpc/types/estuary_rpc.Authentication.html) object *with* the secret defined to [createApiClient](http://digitaltembo.github.io/estuary-rpc/functions/estuary_rpc_client.createApiClient.html) on your client side
 
 Simple example:
 ```

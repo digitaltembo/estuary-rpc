@@ -7,6 +7,7 @@ import {
   URL_FORM_DATA_KEY,
   HTTP_STATUS_CODES,
   Duplex,
+  ApiTypeOf,
 } from "estuary-rpc";
 
 export * from "estuary-rpc";
@@ -47,7 +48,7 @@ export type FetchArgs<T> = FetchOpts & {
  * to pass undefined everytime we don't care about the request type
  * @group Client
  */
-export type FetchOptsArg = FetchOpts | void;
+export type ClientClosure = FetchOpts | void;
 
 /** Returns the URL of a given metadata */
 export function getUrl(meta: SimpleMeta) {
@@ -230,18 +231,18 @@ export function superFetch<Req, Res, Meta extends SimpleMeta>(
   });
 }
 
-function createRestEndpoint<Meta extends SimpleMeta>(
+function createRestEndpoint<Req, Res, Meta extends SimpleMeta>(
   meta: Meta,
   clientOpts?: ClientOpts
-): Endpoint<unknown, unknown, FetchArgs<unknown>, Meta> {
-  const method = async (req: unknown, opts?: FetchOpts) =>
-    superFetch(req, meta, opts ?? {}, clientOpts);
+): Endpoint<Req, Res, FetchArgs<Req>, Meta> {
+  const method = async (req: Req, opts: FetchArgs<Req>) =>
+    superFetch(req, meta, opts ?? {}, clientOpts) as Promise<Res>;
   return Object.assign(method, meta);
 }
-function createWsEndpoint<Meta extends SimpleMeta>(
+function createWsEndpoint<Req, Res, Meta extends SimpleMeta>(
   meta: Meta,
   _?: ClientOpts
-): Endpoint<Duplex<unknown, unknown>, void, FetchOpts, Meta> {
+): Endpoint<Duplex<Req, Res>, void, FetchOpts, Meta> {
   const transport = meta.transport || { transportType: TransportType.JSON };
 
   const method = async (duplex: Duplex<unknown, unknown>) => {
@@ -336,22 +337,24 @@ function createWsEndpoint<Meta extends SimpleMeta>(
 export function createApiClient<
   Meta extends SimpleMeta,
   CustomApi extends Api<unknown, Meta>
->(api: CustomApi, opts?: ClientOpts): Api<FetchOpts, Meta> {
-  const fetchApi: Api<FetchOpts, Meta> = {};
-  Object.keys(api).forEach((apiName: string) => {
+>(api: CustomApi, opts?: ClientOpts): ApiTypeOf<FetchOpts, Meta, CustomApi> {
+  const fetchApi: Partial<ApiTypeOf<FetchOpts, Meta, CustomApi>> = {};
+  Object.keys(api).forEach((apiName: keyof CustomApi) => {
     if (typeof api[apiName] === "function") {
-      const meta = api[apiName] as Meta;
+      // this SHOULD ensure that api[apiName]: Endpoint<Req, Res, unknown, Meta>;
+      // but I have not been able to convince typescript of that fact
+      // so we have to use a few any's here
+      const meta = api[apiName] as unknown as Meta;
       if (meta.method === "WS") {
-        fetchApi[apiName] = createWsEndpoint(meta, opts);
+        fetchApi[apiName] = createWsEndpoint(meta, opts) as any;
       } else {
-        fetchApi[apiName] = createRestEndpoint(meta, opts);
+        fetchApi[apiName] = createRestEndpoint(meta, opts) as any;
       }
     } else {
-      fetchApi[apiName] = createApiClient(
-        api[apiName] as Api<unknown, Meta>,
-        opts
-      );
+      // Likewise, this should ensure that api[apiName]: ApiTypeOf<unknown, Meta, CustomApi>[typeof apiName]
+      // and that therefore this is valid...but typescript remains unconvinced
+      fetchApi[apiName] = createApiClient(api[apiName] as any, opts) as any;
     }
   });
-  return fetchApi;
+  return fetchApi as ApiTypeOf<FetchOpts, Meta, typeof api>;
 }

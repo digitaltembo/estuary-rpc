@@ -1,10 +1,11 @@
 import {
   Api,
+  ApiTypeOf,
   ClientOpts,
   createApiClient,
   Endpoint,
   FetchOpts,
-  FetchOptsArg,
+  ClientClosure,
   get,
   HTTP_STATUS_CODES,
   openStreamHandler,
@@ -43,26 +44,21 @@ afterEach(() => {
   global.XMLHttpRequest = oldXhr;
 });
 
-export interface ExampleApi<Closure, Meta> extends Api<Closure, Meta> {
-  foo: FooService<Closure, Meta>;
-}
 type NestedObj = { a: { b: string[] } };
-export interface FooService<Closure, Meta> extends Api<Closure, Meta> {
-  simpleGet: Endpoint<NestedObj | number | undefined, number, Closure, Meta>;
-  simplePost: Endpoint<string, string, Closure, Meta>;
-  simpleStream: StreamEndpoint<string, boolean, Closure, Meta>;
-}
 
-const apiMeta: ExampleApi<unknown, SimpleMeta> = {
+const apiMeta = {
   foo: {
-    simpleGet: get("get"),
-    simpleStream: ws("ws"),
-    simplePost: post("post"),
+    simpleGet: get<NestedObj | number | undefined, number>("get"),
+    simpleStream: ws<string, boolean>("ws"),
+    simplePost: post<string, string>("post"),
   },
 };
 
+type ExampleApi<Closure> = ApiTypeOf<Closure, SimpleMeta, typeof apiMeta>;
+type FooService<Closure> = ExampleApi<Closure>["foo"];
+
 const client = (opts?: ClientOpts) =>
-  createApiClient(apiMeta, opts) as ExampleApi<FetchOptsArg, SimpleMeta>;
+  createApiClient(apiMeta, opts) as ExampleApi<ClientClosure>;
 
 async function call<T>(promise: T, status: number, response: any) {
   xhrMock.status = status;

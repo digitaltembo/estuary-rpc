@@ -1,1 +1,1 @@
-../common/exampleApi.ts
+../react-client/src/exampleApi.ts

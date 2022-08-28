@@ -1,13 +1,13 @@
-import { Api, Endpoint, SimpleMeta, Duplex } from "estuary-rpc";
+import { Api, Endpoint, SimpleMeta, Duplex, ApiTypeOf } from "estuary-rpc";
 
 import { ApiContext, RestEndpoints, ServerOpts, WsEndpoints } from "./types";
 import { methodId } from "./middleware";
 import { createRestServer, restEndpoint } from "./rest";
 import { createWsServer, wsEndpoint } from "./ws";
 
-function flattenApi<Meta extends SimpleMeta>(
-  api: Api<ApiContext, unknown>,
-  apiMeta: Api<unknown, Meta>,
+function flattenApi<T extends Api<unknown, Meta>, Meta extends SimpleMeta>(
+  api: ApiTypeOf<ApiContext, unknown, T>,
+  apiMeta: ApiTypeOf<unknown, Meta, T>,
   serverOpts: ServerOpts<Meta>
 ): [RestEndpoints, WsEndpoints] {
   const restEndpoints: RestEndpoints = {};
@@ -36,8 +36,8 @@ function flattenApi<Meta extends SimpleMeta>(
       }
     } else {
       const [childRest, childWs] = flattenApi(
-        api[apiName] as Api<ApiContext, unknown>,
-        apiMeta[apiName] as Api<unknown, Meta>,
+        api[apiName] as any,
+        apiMeta[apiName] as any,
         serverOpts
       );
       Object.assign(restEndpoints, childRest);
@@ -100,12 +100,15 @@ function flattenApi<Meta extends SimpleMeta>(
  * ```
  * @group Server
  */
-export function createApiServer<Meta extends SimpleMeta>(
-  api: Api<ApiContext, unknown>,
-  description: Api<unknown, Meta>,
+export function createApiServer<
+  Meta extends SimpleMeta,
+  T extends Api<unknown, Meta>
+>(
+  api: ApiTypeOf<ApiContext, unknown, T>,
+  apiMeta: ApiTypeOf<unknown, Meta, T>,
   serverOpts: ServerOpts<Meta>
 ) {
-  const [restEndpoints, wsEndpoints] = flattenApi(api, description, serverOpts);
+  const [restEndpoints, wsEndpoints] = flattenApi(api, apiMeta, serverOpts);
 
   const server = createRestServer(restEndpoints, serverOpts);
   createWsServer(server, wsEndpoints, serverOpts);

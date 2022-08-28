@@ -8,7 +8,7 @@ Estuary RPC is an attempt to make an extremely simple (toy) RPC system for use b
 
 # This Package
 
-`estuary-rpc-server` defines the `createApiServer` method for translating your API metadata definition into a and typesafe collection of async functions organized into a functioning HTTP and WS server
+`estuary-rpc-server` defines the [createApiServer](http://digitaltembo.github.io/estuary-rpc/functions/estuary_rpc_server.createApiServer.html) method for translating your API metadata definition into a and typesafe collection of async functions organized into a functioning HTTP and WS server
 
 # Installation
 This should be installed in your server project
@@ -19,7 +19,7 @@ npm install estuary-rpc-server
 # Usage
 
 After following instructions for your common code, on the serverside, you need to instantiate an object that implements your Api with an ApiContext closure (so your endpoints can have access to the raw request/response and helper error methods) and an unknown metadata:
-```
+```ts
 const server: ExampleApi<ApiContext, unknown> = {
   foo: {
     emptyPost: async () => {
@@ -43,7 +43,7 @@ const server: ExampleApi<ApiContext, unknown> = {
 Likely, of course, your individual services will be defined in separate files and/or directories, but they all still need to come together at the end. 
 
 After you have a server object, to actually run it in such a way as to respond correctly to REST and WS connections, you simply need to `import { createApiServer } from "estuary-rpc-server";` and call it with your server definition and api metadata definition, as well as the port number on which you want to serve it
-```
-createApiServer(server, exampleApiMeta, { port: 8888});
+```ts
+createApiServer(server, exampleApiMeta, { port: 8888} );
 ```
 and the server will listen correctly!

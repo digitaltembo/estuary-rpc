@@ -245,7 +245,7 @@ function accumulateSecurities<Meta extends SimpleMeta>(
  * @returns A
  * @example
  * ```ts
- * function MySpec({api}: {api: MyApiType<unknown, MyMetaType>} ) {
+ * function MySpec({api}: {api: MyApiTypeOf<unknown, MyMetaType>} ) {
  *   const spec = createOpenApiSpec(exampleApiMeta, {
  *     info: {
  *       title: "Example API",

@@ -13,8 +13,8 @@ export type Method = "GET" | "POST" | "PUT" | "DELETE" | "WS";
  * @group Endpoint Metadata
  */
 export interface SimpleMeta extends OpenApiMeta {
-  method: Method;
-  url: string;
+  method?: Method;
+  url?: string;
   transport?: Transport<unknown, unknown>;
   authentication?: Authentication;
 }
@@ -28,7 +28,7 @@ export interface SimpleMeta extends OpenApiMeta {
  * @param Res The type of the data that defines the response
  * @param Closure In the clientside instantiation of an endpoint, the closure is used
  * to pass additional information (such as a definition of timeout to use) to estuary-rpc-client
- * (the closure here is an instance of {@link estuary-rpc-client!FetchOptsArg}), while on the serverside
+ * (the closure here is an instance of {@link estuary-rpc-client!ClientClosure}), while on the serverside
  * the closure is used to let estuary-rpc-server pass more information to your endpoint
  * definition (the closure here is an instance of {@link estuary-rpc-server!ApiContext}). In many cases
  * this will not be necessary, but the additional level of control can be useful.
@@ -78,10 +78,12 @@ export type StreamEndpoint<Req, Res, Closure, Meta> = Endpoint<
 >;
 
 /**
- * An Api is effecitvely just an arbitrarily nested set of endpoints allowing for nice organization of
- * the interface over which estuary-rpc operates. To start using estuary-rpc, first you must define
- * your own ExampleApi type extending from this Api interface, then you must define an exampleApiMetaDefition
+ * An Api type is effecitvely just an arbitrarily nested set of endpoints allowing for nice organization of
+ * the interface over which estuary-rpc operates. To start using estuary-rpc, you may first define
+ * your own ExampleApi type extending from this Api interface, and then define an exampleApiMetaDefition
  * of type ExampleApi<unknown, CustomMeta> (without a closure as the MetaDefinition is not used as a function).
+ * Alternatively, you may just define your exampleApiMetaDefinition and use type inference and {@link ApiTypeOf}
+ * to deduce your API type from that. That is, you may either explicitly or implicitly extend this Api.
  * From there, on the clientside a call to {@link estuary-rpc-client!createApiClient} will create an
  * ExampleApi<{@link estuary-rpc-client!FetchOpts}, Meta>,
  * while on the serverside a call to {@link estuary-rpc-server!createApiServer} will create an
@@ -105,9 +107,58 @@ export type StreamEndpoint<Req, Res, Closure, Meta> = Endpoint<
  * }
  * ```
  */
-export interface Api<Closure, Meta> {
+export type Api<Closure, Meta> = {
   [key: string]: Api<Closure, Meta> | Endpoint<any, any, Closure, Meta>;
-}
+};
+
+/**
+ * Given a type Closure and endpoint type T extends Endpoint<A, B, unknown, Meta>, this defines the type
+ *                                                  Endpoint<A, B, Closure, Meta>
+ * @example
+ * ```
+ * type MyEndpoint<Closure> =
+ *   EndpointWithClosure<typeof get<number, number, SimpleMeta>("url"), Closure, SimpleMeta>;
+ * // is equivalent to the following, despite not having direct type access to the request and response types
+ * type MyEndpoint<Closure> = Endpoint<number, number, Closure, SimpleMeta>
+ * ```
+ */
+type EndpointWithClosure<T, Closure, Meta> = T extends Endpoint<
+  infer Req,
+  infer Res,
+  unknown,
+  Meta
+>
+  ? Endpoint<Req, Res, Closure, Meta>
+  : never;
+
+/**
+ * Estuary-RPC at some points needs a type definition for your API, and at some points needs the metadata definition
+ * This type will extract the type definition with a generic closure (as client and server side type definitions use
+ * separate closures).
+ * @param Closure new Closure Type
+ * @param Meta The type of the metadata that is used to describe the endpoint. This should extend
+ * {@link SimpleMeta}, although for this code it is not strictly necessary
+ * @param T The type from which to extract the ApiType
+ *
+ * @example
+ * ```ts
+ * const myApiMetadata = { foo: get<number, number, SimpleMeta>("foo")};
+ * type MyApiTypeOf<Closure> = ApiTypeOf<typeof myApiMetadata>;
+ * const client = createApiClient(myApiMetadata) as MyApiTypeOf<ClientClosure>;
+ * ```
+ *
+ */
+export type ApiTypeOf<Closure, Meta, T extends Api<unknown, Meta>> = {
+  [Prop in keyof T]: T[Prop] extends (...args: any) => any
+    ? EndpointWithClosure<T[Prop], Closure, Meta>
+    : ApiTypeOf<
+        Closure,
+        Meta,
+        // Given T extends Api<unknown, Meta> and T[Prop] ! extends () => any, it MUST be the case
+        // that T[Prop] extends Api<unknown, Meta> as well... not sure why typescript doesn't know this
+        T[Prop] extends Api<unknown, Meta> ? T[Prop] : never
+      >;
+};
 
 /**
  * The TransportType enum is used in the {@link Transport} object as the distinguishing factor
