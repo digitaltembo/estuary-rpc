@@ -1,4 +1,4 @@
-<img align="center" alt="Estuary-RPC" src="https://user-images.githubusercontent.com/4743325/187093151-ce7dae3b-6893-4276-a889-4e2469881b17.png" />
+<img align="center" alt="Estuary-RPC" src="https://user-images.githubusercontent.com/4743325/187557355-dffd76cb-a27c-47eb-b008-1a44fd89157d.png" />
 <p align="center">
   <a href="https://github.com/digitaltembo/estuary-rpc/actions/workflows/builld-and-deploy.yaml">
     <img alt="Build & Deploy" 
